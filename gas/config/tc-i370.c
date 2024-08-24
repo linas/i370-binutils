@@ -2273,8 +2273,7 @@ md_assemble (char *str)
       else
 	{
 	  fix_new_exp (frag_now, f - frag_now->fr_literal, opcode->len,
-		       &fixups[i].exp,
-		       (operand->flags & I370_OPERAND_RELATIVE) != 0,
+		       &fixups[i].exp, 0,
 		       ((bfd_reloc_code_real_type)
 			(fixups[i].opindex + (int) BFD_RELOC_UNUSED)));
 	}
