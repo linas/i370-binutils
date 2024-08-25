@@ -2237,9 +2237,8 @@ md_assemble (char *str)
      md_apply_fix.  */
   for (i = 0; i < fc; i++)
     {
-      const struct i370_operand *operand;
-
-      operand = &i370_operands[fixups[i].opindex];
+      // const struct i370_operand *operand;
+      // operand = &i370_operands[fixups[i].opindex];
       if (fixups[i].reloc != BFD_RELOC_UNUSED)
 	{
 	  reloc_howto_type *reloc_howto = bfd_reloc_type_lookup (stdoutput, fixups[i].reloc);
