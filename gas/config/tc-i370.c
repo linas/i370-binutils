@@ -2653,7 +2653,8 @@ md_section_align (seg, addr)
 {
   int align = bfd_get_section_alignment (stdoutput, seg);
 
-  return (addr + (1 << align) - 1) & (-1 << align);
+  /* valueT is bfd_vma is 64-bit */
+  return (addr + (1UL << align) - 1) & ((~0UL) << align);
 }
 
 /* We don't have any form of relaxing.  */
