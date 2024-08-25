@@ -1326,7 +1326,7 @@ add_to_lit_pool (expressionS *exx, char *name, int sz)
 
 /* The symbol setup for the literal pool is done in two steps.  First,
    a symbol that represents the start of the literal pool is created,
-   above, in the add_to_pool() routine. This sym ???_poolP.
+   above, in the add_to_pool() routine. This is sym ???_poolP.
    However, we don't know what fragment it's in until a bit later.
    So we defer the frag_now thing, and the symbol name, until .ltorg time.  */
 
@@ -1651,7 +1651,10 @@ i370_ltorg (int ignore ATTRIBUTE_UNUSED)
   record_alignment (now_seg, biggest_align);
 
   /* Note that the gas listing will print only the first five
-     entries in the pool .... wonder how to make it print more.  */
+     entries in the pool .... wonder how to make it print more.
+     A hack to make it print more is to change LISTING_LHS_CONT_LINES
+     in gas/listing.c but I don't see a non-hacky way to print more.
+  */
   /* Output largest literals first, then the smaller ones.  */
   for (litsize=8; litsize; litsize /=2)
     {
