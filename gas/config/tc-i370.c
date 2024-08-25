@@ -957,9 +957,8 @@ i370_dc (int unused ATTRIBUTE_UNUSED)
       emit_expr (&exp, nbytes);
       break;
     case 'E':  /* 32-bit */
-      type = 'f';
-      /* Fall through.  */
     case 'D':  /* 64-bit */
+      if ('E' == type) type = 'f';
       md_atof (type, tmp, &nbytes);
       p = frag_more (nbytes);
       memcpy (p, tmp, nbytes);
