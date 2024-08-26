@@ -1409,7 +1409,7 @@ add_to_lit_pool (expressionS *exx, char *name, int sz)
 
 /* The symbol setup for the literal pool is done in two steps.  First,
  * a symbol that represents the start of the literal pool is created,
- * above, in the add_to_pool() routine. This sym ???_poolP.
+ * above, in the add_to_pool() routine. This is sym ???_poolP.
  * However, we don't know what fragment its in until a bit later.
  * So we defer the frag_now thing, and the symbol name, until .ltorg time
  */
@@ -1761,6 +1761,8 @@ i370_ltorg (ignore)
 
   /* Note that the gas listing will print only the first five
    * entries in the pool .... wonder how to make it print more ...
+   * A hack to make it print more is to change LISTING_LHS_CONT_LINES
+   * in gas/listing.c but I don't see a non-hacky way to print more.
    */
   /* output largest literals first, then the smaller ones.  */
   for (litsize=8; litsize; litsize /=2)
@@ -1965,7 +1967,7 @@ void
 md_assemble (str)
      char *str;
 {
-  char *s, *opcode_str;
+  char *s;
   const struct i370_opcode *opcode;
   i370_insn_t insn;
   const unsigned char *opindex_ptr;
@@ -1986,7 +1988,6 @@ md_assemble (str)
     ;
   if (*s != '\0')
     *s++ = '\0';
-  opcode_str = str;
 
   /* Look up the opcode in the hash table.  */
   opcode = (const struct i370_opcode *) hash_find (i370_hash, str);
@@ -2104,12 +2105,10 @@ md_assemble (str)
   for (opindex_ptr = opcode->operands; *opindex_ptr != 0; opindex_ptr++)
     {
       const struct i370_operand *operand;
-      const char *errmsg;
       char *hold;
       expressionS ex;
 
       operand = &i370_operands[*opindex_ptr];
-      errmsg = NULL;
 
       /* If this is an index operand, and we are skipping it,
 	 just insert a zero.  */
