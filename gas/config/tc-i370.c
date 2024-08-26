@@ -1053,6 +1053,7 @@ i370_dc (unused)
       break;
     case 'E':  /* 32-bit */
     case 'D':  /* 64-bit */
+      if ('E' == type) type = 'f';
       md_atof (type, tmp, &nbytes);
       p = frag_more (nbytes);
       memcpy (p, tmp, nbytes);
