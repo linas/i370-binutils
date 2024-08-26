@@ -1298,6 +1298,9 @@ typedef struct literalS
   char * sym_name;
   char size;  /* 1,2,4 or 8 */
   short offset;
+
+  /* Cache for generic_floating_point_number and generic_bignum */
+  LITTLENUM_TYPE bignum[4];
 } literalT;
 
 literalT literals[MAX_LITERAL_POOL_SIZE];
@@ -1318,7 +1321,7 @@ symbol_make_empty (void)
   			(valueT) 0, &zero_address_frag);
 }
 
-/* add an expression to the literal pool */
+/* Add an expression to the literal pool. */
 static  void
 add_to_lit_pool (expressionS *exx, char *name, int sz)
 {
@@ -1375,6 +1378,16 @@ add_to_lit_pool (expressionS *exx, char *name, int sz)
       else
 	{
 	  literals[next_literal_pool_place].sym_name = NULL;
+	}
+
+      /* Cache the value of generic_bignum; we need this later,
+       * when issueing the ltorg */
+      if (exx->X_op == O_big)
+	{
+	  literals[next_literal_pool_place].bignum[0] = generic_bignum[0];
+	  literals[next_literal_pool_place].bignum[1] = generic_bignum[1];
+	  literals[next_literal_pool_place].bignum[2] = generic_bignum[2];
+	  literals[next_literal_pool_place].bignum[3] = generic_bignum[3];
 	}
       next_literal_pool_place++;
     }
@@ -1679,7 +1692,26 @@ i370_addr_cons (expressionS *exp)
 	  /* fix up lengths for floats and doubles */
 	  if (O_big == exp->X_op)
 	    {
+	      LITTLENUM_TYPE fltnum[4];
 	      exp->X_add_number = cons_len / CHARS_PER_LITTLENUM;
+
+	      /* Convert generic_floating_point_number to bignum.
+	       * The add_to_lit_pool will cache this, for later playback. */
+	      if ('E' == name[0]) /* 32-bit float */
+		{
+		  gen_to_words(fltnum, 2, 8);
+		  generic_bignum[0] = fltnum[1];
+		  generic_bignum[1] = fltnum[0];
+		}
+	      else if ('D' == name[0]) /* 64-bit double */
+		{
+		  gen_to_words(fltnum, 4, 11);
+		  /* This is correct if host is LE, but what if host is BE? */
+		  generic_bignum[0] = fltnum[3];
+		  generic_bignum[1] = fltnum[2];
+		  generic_bignum[2] = fltnum[1];
+		  generic_bignum[3] = fltnum[0];
+		}
 	    }
 	}
       else
@@ -1810,6 +1842,14 @@ i370_ltorg (ignore)
 		}
 #endif /* EMIT_ADDR_CONS_SYMBOLS */
 
+	      /* Restore bignum from cache, where emit_expr can find it. */
+	      if (literals[lit_count].exp.X_op == O_big)
+		{
+		  generic_bignum[0] = literals[lit_count].bignum[0];
+		  generic_bignum[1] = literals[lit_count].bignum[1];
+		  generic_bignum[2] = literals[lit_count].bignum[2];
+		  generic_bignum[3] = literals[lit_count].bignum[3];
+		}
 	      emit_expr (&(literals[lit_count].exp), literals[lit_count].size);
 	    }
 	  lit_count ++;
