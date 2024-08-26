@@ -42,6 +42,9 @@
 /* Tell the main code what the endianness is.  */
 extern int target_big_endian;
 
+/* Size ot literal pool/ltorg to print; #include "gas/listing.h" */
+extern int listing_lhs_cont_lines;
+
 
 /* Generic assembler global variables which must be defined by all
    targets.  */
@@ -1642,6 +1645,7 @@ i370_ltorg (int ignore ATTRIBUTE_UNUSED)
 {
   int litsize;
   int lit_count = 0;
+  int byte_count = 0;
   int biggest_literal_size = 0;
   int biggest_align = 0;
   char pool_name[20];
@@ -1683,11 +1687,6 @@ i370_ltorg (int ignore ATTRIBUTE_UNUSED)
   frag_align (biggest_align, 0, 0);
   record_alignment (now_seg, biggest_align);
 
-  /* Note that the gas listing will print only the first five
-     entries in the pool .... wonder how to make it print more.
-     A hack to make it print more is to change LISTING_LHS_CONT_LINES
-     in gas/listing.c but I don't see a non-hacky way to print more.
-  */
   /* Output largest literals first, then the smaller ones.  */
   for (litsize=8; litsize; litsize /=2)
     {
@@ -1741,10 +1740,14 @@ i370_ltorg (int ignore ATTRIBUTE_UNUSED)
 		  generic_bignum[3] = literals[lit_count].bignum[3];
 		}
 	      emit_expr (&(literals[lit_count].exp), literals[lit_count].size);
+	      byte_count += literals[lit_count].size;
 	    }
 	  lit_count ++;
 	}
     }
+
+  /* Print this many lines of the literal pool in the GAS listing. */
+  listing_lhs_cont_lines = byte_count / 4;
 
   next_literal_pool_place = 0;
   longlong_poolP = NULL;
