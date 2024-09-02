@@ -65,6 +65,11 @@ mkdir build; cd build
 ../configure --target=i370-ibm-linux
 ```
 
+Bug fixes can be verified with the example source demos:
+```
+cd ../i370-examples
+../build/gas/as-new -a=bignum-bug.lst -o bignum-bug.obj bignum-bug.s
+```
 
 
 README for GNU development tools
