@@ -1,5 +1,5 @@
-README for i370-binutils
-------------------------
+README for i370-binutils (Version 2.30)
+---------------------------------------
 This git repo contains several versions of GNU binutils adapted for
 the IBM System/370 instruction set. The goal is to provide an assembler
 that is reasonably similar to HLASM, the conventional MVS/VM assembler.
