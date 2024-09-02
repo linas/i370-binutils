@@ -29,7 +29,6 @@
 #include "as.h"
 #include "safe-ctype.h"
 #include "subsegs.h"
-#include "struc-symbol.h"
 
 #include "opcode/i370.h"
 
@@ -331,10 +330,10 @@ static expressionS i370_using_other_baseaddr;
 static segT i370_other_section = undefined_section;
 
 /* Opcode hash table.  */
-static struct hash_control *i370_hash;
+static htab_t i370_hash = NULL;
 
 /* Macro hash table.  */
-static struct hash_control *i370_macro_hash;
+static htab_t i370_macro_hash = NULL;
 
 #ifdef OBJ_ELF
 /* What type of shared library support to use.  */
@@ -500,7 +499,7 @@ md_begin (void)
 #endif
 
   /* Insert the opcodes into a hash table.  */
-  i370_hash = hash_new ();
+  i370_hash = str_htab_create ();
 
    op_end = i370_opcodes + i370_num_opcodes;
    for (op = i370_opcodes; op < op_end; op++)
@@ -510,10 +509,7 @@ md_begin (void)
 
        if ((op->flags & i370_cpu) != 0)
          {
-           const char *retval;
-
-           retval = hash_insert (i370_hash, op->name, (void *) op);
-           if (retval != (const char *) NULL)
+           if (str_hash_insert (i370_hash, op->name, (void *) op, 0) != NULL)
              {
                as_bad (_("Internal assembler error for instruction %s"), op->name);
                dup_insn = TRUE;
@@ -522,17 +518,14 @@ md_begin (void)
      }
 
   /* Insert the macros into a hash table.  */
-  i370_macro_hash = hash_new ();
+  i370_macro_hash = str_htab_create ();
 
   macro_end = i370_macros + i370_num_macros;
   for (macro = i370_macros; macro < macro_end; macro++)
     {
       if ((macro->flags & i370_cpu) != 0)
         {
-          const char *retval;
-
-          retval = hash_insert (i370_macro_hash, macro->name, (void *) macro);
-          if (retval != (const char *) NULL)
+          if (str_hash_insert (i370_macro_hash, macro->name, (void *) macro, 0) != NULL)
             {
               as_bad (_("Internal assembler error for macro %s"), macro->name);
               dup_insn = TRUE;
@@ -1221,7 +1214,7 @@ static symbolS *
 symbol_make_empty (void)
 {
   return symbol_create (FAKE_LABEL_NAME, undefined_section,
-  			(valueT) 0, &zero_address_frag);
+  			&zero_address_frag, 0);
 }
 
 /* Make the first argument an address-relative expression
@@ -1648,7 +1641,7 @@ i370_ltorg (int ignore ATTRIBUTE_UNUSED)
   int byte_count = 0;
   int biggest_literal_size = 0;
   int biggest_align = 0;
-  char pool_name[20];
+  char pool_name[28];
 
   if (strncmp (now_seg->name, ".text", 5))
     {
@@ -1966,13 +1959,13 @@ md_assemble (char *str)
     *s++ = '\0';
 
   /* Look up the opcode in the hash table.  */
-  opcode = (const struct i370_opcode *) hash_find (i370_hash, str);
+  opcode = (const struct i370_opcode *) str_hash_find (i370_hash, str);
   if (opcode == (const struct i370_opcode *) NULL)
     {
       const struct i370_macro *macro;
 
       gas_assert (i370_macro_hash);
-      macro = (const struct i370_macro *) hash_find (i370_macro_hash, str);
+      macro = (const struct i370_macro *) str_hash_find (i370_macro_hash, str);
       if (macro == (const struct i370_macro *) NULL)
         as_bad (_("Unrecognized opcode: `%s'"), str);
       else
@@ -2422,7 +2415,7 @@ md_number_to_chars (char *buf, valueT val, int n)
 valueT
 md_section_align (asection *seg, valueT addr)
 {
-  int align = bfd_get_section_alignment (stdoutput, seg);
+  int align = bfd_section_alignment (seg);
 
   /* valueT is bfd_vma is 64-bit */
   return (addr + (1UL << align) - 1) & ((~0UL) << align);
