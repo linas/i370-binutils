@@ -236,6 +236,7 @@ ALL_EMULATION_SOURCES = \
 	eelf32frv.c \
 	eelf32frvfd.c \
 	eelf32ft32.c \
+	eelf32i370.c \
 	eelf32ip2k.c \
 	eelf32iq10.c \
 	eelf32iq2000.c \
