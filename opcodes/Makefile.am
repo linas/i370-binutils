@@ -155,6 +155,8 @@ TARGET32_LIBOPCODES_CFILES = \
 	ft32-opc.c \
 	h8300-dis.c \
 	hppa-dis.c \
+	i370-dis.c \
+	i370-opc.c \
 	i386-dis.c \
 	ip2k-asm.c \
 	ip2k-desc.c \
