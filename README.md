@@ -69,6 +69,15 @@ mkdir build; cd build
 make -j
 ```
 
+#### Version 2.30
+The following should work:
+```
+git checkout i370-binutils-2_30
+mkdir build; cd build
+../configure --target=i370-ibm-linux --enable-obsolete
+```
+
+#### Examples
 Bug fixes can be verified with the example source demos:
 ```
 cd ../i370-examples
