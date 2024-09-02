@@ -385,11 +385,11 @@ i370_elf_section_from_shdr (bfd *abfd,
     return false;
 
   newsect = hdr->bfd_section;
-  flags = bfd_get_section_flags (abfd, newsect);
+  flags = bfd_section_flags (newsect);
   if (hdr->sh_type == SHT_ORDERED)
     flags |= SEC_SORT_ENTRIES;
 
-  bfd_set_section_flags (abfd, newsect, flags);
+  bfd_set_section_flags (newsect, flags);
   return true;
 }
 
@@ -441,7 +441,7 @@ i370_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
       s = bfd_make_section_anyway_with_flags (abfd, ".rela.sbss",
 					      flags | SEC_READONLY);
       if (s == NULL
-	  || ! bfd_set_section_alignment (abfd, s, 2))
+	  || ! bfd_set_section_alignment (s, 2))
 	return false;
     }
 
@@ -449,7 +449,7 @@ i370_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
    s = bfd_make_section_anyway_with_flags (abfd, ".rela.text",
 					   flags | SEC_READONLY);
    if (s == NULL
-      || ! bfd_set_section_alignment (abfd, s, 2))
+      || ! bfd_set_section_alignment (s, 2))
     return false;
   return true;
 }
@@ -640,14 +640,14 @@ i370_elf_size_dynamic_sections (bfd *output_bfd,
 
       /* It's OK to base decisions on the section name, because none
 	 of the dynobj section names depend upon the input files.  */
-      name = bfd_get_section_name (dynobj, s);
+      name = bfd_section_name (s);
 
       if (strcmp (name, ".plt") == 0)
 	{
 	  /* Remember whether there is a PLT.  */
 	  plt = s->size != 0;
 	}
-      else if (CONST_STRNEQ (name, ".rela"))
+      else if (startswith (name, ".rela"))
 	{
 	  if (s->size != 0)
 	    {
@@ -659,8 +659,7 @@ i370_elf_size_dynamic_sections (bfd *output_bfd,
 
 	      /* If this relocation section applies to a read only
 		 section, then we probably need a DT_TEXTREL entry.  */
-	      outname = bfd_get_section_name (output_bfd,
-					      s->output_section);
+	      outname = bfd_section_name (s->output_section);
 	      target = bfd_get_section_by_name (output_bfd, outname + 5);
 	      if (target != NULL
 		  && (target->flags & SEC_READONLY) != 0
@@ -1143,7 +1142,7 @@ i370_elf_relocate_section (bfd *output_bfd,
 	      (*info->callbacks->undefined_symbol)
 		(info, h->root.root.string, input_bfd,
 		 input_section, rel->r_offset,
-		 (info->unresolved_syms_in_objects == RM_GENERATE_ERROR
+		 (info->unresolved_syms_in_objects == RM_DIAGNOSE
 		  || ELF_ST_VISIBILITY (h->other)));
 	      ret = false;
 	      continue;
@@ -1349,7 +1348,7 @@ i370_elf_relocate_section (bfd *output_bfd,
 		      break;
 
 		    if (*name == '\0')
-		      name = bfd_section_name (input_bfd, sec);
+		      name = bfd_section_name (sec);
 		  }
 
 		(*info->callbacks->reloc_overflow) (info,
