@@ -163,6 +163,7 @@ TARGET_CPU_CFILES = \
 	config/tc-h8300.c \
 	config/tc-hppa.c \
 	config/tc-ia64.c \
+	config/tc-i370.c \
 	config/tc-i386.c \
 	config/tc-ip2k.c \
 	config/tc-iq2000.c \
@@ -238,6 +239,7 @@ TARGET_CPU_HFILES = \
 	config/tc-ft32.h \
 	config/tc-h8300.h \
 	config/tc-hppa.h \
+	config/tc-i370.h \
 	config/tc-ia64.h \
 	config/tc-i386.h \
 	config/tc-ip2k.h \
