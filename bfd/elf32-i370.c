@@ -289,7 +289,7 @@ i370_elf_reloc_name_lookup (bfd *abfd ATTRIBUTE_UNUSED,
 
 /* Set the howto pointer for an i370 ELF reloc.  */
 
-static void
+static bool
 i370_elf_info_to_howto (bfd *abfd ATTRIBUTE_UNUSED,
 			arelent *cache_ptr,
 			Elf_Internal_Rela *dst)
@@ -310,6 +310,7 @@ i370_elf_info_to_howto (bfd *abfd ATTRIBUTE_UNUSED,
       r_type = R_I370_NONE;
     }
   cache_ptr->howto = i370_elf_howto_table[r_type];
+  return cache_ptr->howto != NULL;
 }
 
 /* Hack alert --  the following several routines look generic to me ...
@@ -547,243 +548,6 @@ i370_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
     }
 
   return _bfd_elf_adjust_dynamic_copy (info, h, s);
-}
-
-/* Increment the index of a dynamic symbol by a given amount.  Called
-   via elf_link_hash_traverse.  */
-/* XXX hack alert bogus This routine is mostly all junk and almost
-   certainly does the wrong thing.  Its here simply because it does
-   just enough to allow glibc-2.1 ld.so to compile & link.  */
-
-static bool
-i370_elf_adjust_dynindx (struct elf_link_hash_entry *h, void * cparg)
-{
-  int *cp = (int *) cparg;
-
-#ifdef DEBUG
-  fprintf (stderr,
-	   "i370_elf_adjust_dynindx called, h->dynindx = %ld, *cp = %d\n",
-	   h->dynindx, *cp);
-#endif
-
-  if (h->dynindx != -1)
-    h->dynindx += *cp;
-
-  return true;
-}
-
-/* Set the sizes of the dynamic sections.  */
-/* XXX hack alert bogus This routine is mostly all junk and almost
-   certainly does the wrong thing.  Its here simply because it does
-   just enough to allow glibc-2.1 ld.so to compile & link.  */
-
-static bool
-i370_elf_size_dynamic_sections (bfd *output_bfd,
-				struct bfd_link_info *info)
-{
-  bfd *dynobj;
-  asection *s;
-  bool plt;
-  bool relocs;
-  bool reltext;
-
-#ifdef DEBUG
-  fprintf (stderr, "i370_elf_size_dynamic_sections called\n");
-#endif
-
-  dynobj = elf_hash_table (info)->dynobj;
-  BFD_ASSERT (dynobj != NULL);
-
-  if (elf_hash_table (info)->dynamic_sections_created)
-    {
-      /* Set the contents of the .interp section to the interpreter.  */
-      if (bfd_link_executable (info) && !info->nointerp)
-	{
-	  s = bfd_get_linker_section (dynobj, ".interp");
-	  BFD_ASSERT (s != NULL);
-	  s->size = sizeof ELF_DYNAMIC_INTERPRETER;
-	  s->contents = (unsigned char *) ELF_DYNAMIC_INTERPRETER;
-	}
-    }
-  else
-    {
-      /* We may have created entries in the .rela.got, .rela.sdata, and
-	 .rela.sdata2 sections.  However, if we are not creating the
-	 dynamic sections, we will not actually use these entries.  Reset
-	 the size of .rela.got, et al, which will cause it to get
-	 stripped from the output file below.  */
-      static char *rela_sections[] = { ".rela.got", ".rela.sdata",
-				       ".rela.sdata2", ".rela.sbss",
-				       NULL };
-      char **p;
-
-      for (p = rela_sections; *p != NULL; p++)
-	{
-	  s = bfd_get_linker_section (dynobj, *p);
-	  if (s != NULL)
-	    s->size = 0;
-	}
-    }
-
-  /* The check_relocs and adjust_dynamic_symbol entry points have
-     determined the sizes of the various dynamic sections.  Allocate
-     memory for them.  */
-  plt = false;
-  relocs = false;
-  reltext = false;
-  for (s = dynobj->sections; s != NULL; s = s->next)
-    {
-      const char *name;
-
-      if ((s->flags & SEC_LINKER_CREATED) == 0)
-	continue;
-
-      /* It's OK to base decisions on the section name, because none
-	 of the dynobj section names depend upon the input files.  */
-      name = bfd_section_name (s);
-
-      if (strcmp (name, ".plt") == 0)
-	{
-	  /* Remember whether there is a PLT.  */
-	  plt = s->size != 0;
-	}
-      else if (startswith (name, ".rela"))
-	{
-	  if (s->size != 0)
-	    {
-	      asection *target;
-	      const char *outname;
-
-	      /* Remember whether there are any relocation sections.  */
-	      relocs = true;
-
-	      /* If this relocation section applies to a read only
-		 section, then we probably need a DT_TEXTREL entry.  */
-	      outname = bfd_section_name (s->output_section);
-	      target = bfd_get_section_by_name (output_bfd, outname + 5);
-	      if (target != NULL
-		  && (target->flags & SEC_READONLY) != 0
-		  && (target->flags & SEC_ALLOC) != 0)
-		reltext = true;
-
-	      /* We use the reloc_count field as a counter if we need
-		 to copy relocs into the output file.  */
-	      s->reloc_count = 0;
-	    }
-	}
-      else if (strcmp (name, ".got") != 0
-	       && strcmp (name, ".sdata") != 0
-	       && strcmp (name, ".sdata2") != 0
-	       && strcmp (name, ".dynbss") != 0
-	       && strcmp (name, ".dynsbss") != 0)
-	{
-	  /* It's not one of our sections, so don't allocate space.  */
-	  continue;
-	}
-
-      if (s->size == 0)
-	{
-	  /* If we don't need this section, strip it from the
-	     output file.  This is mostly to handle .rela.bss and
-	     .rela.plt.  We must create both sections in
-	     create_dynamic_sections, because they must be created
-	     before the linker maps input sections to output
-	     sections.  The linker does that before
-	     adjust_dynamic_symbol is called, and it is that
-	     function which decides whether anything needs to go
-	     into these sections.  */
-	  s->flags |= SEC_EXCLUDE;
-	  continue;
-	}
-
-      if ((s->flags & SEC_HAS_CONTENTS) == 0)
-	continue;
-
-      /* Allocate memory for the section contents.  */
-      s->contents = bfd_zalloc (dynobj, s->size);
-      if (s->contents == NULL)
-	return false;
-    }
-
-  if (elf_hash_table (info)->dynamic_sections_created)
-    {
-      /* Add some entries to the .dynamic section.  We fill in the
-	 values later, in i370_elf_finish_dynamic_sections, but we
-	 must add the entries now so that we get the correct size for
-	 the .dynamic section.  The DT_DEBUG entry is filled in by the
-	 dynamic linker and used by the debugger.  */
-#define add_dynamic_entry(TAG, VAL) \
-  _bfd_elf_add_dynamic_entry (info, TAG, VAL)
-
-      if (!bfd_link_pic (info))
-	{
-	  if (!add_dynamic_entry (DT_DEBUG, 0))
-	    return false;
-	}
-
-      if (plt)
-	{
-	  if (!add_dynamic_entry (DT_PLTGOT, 0)
-	      || !add_dynamic_entry (DT_PLTRELSZ, 0)
-	      || !add_dynamic_entry (DT_PLTREL, DT_RELA)
-	      || !add_dynamic_entry (DT_JMPREL, 0))
-	    return false;
-	}
-
-      if (relocs)
-	{
-	  if (!add_dynamic_entry (DT_RELA, 0)
-	      || !add_dynamic_entry (DT_RELASZ, 0)
-	      || !add_dynamic_entry (DT_RELAENT, sizeof (Elf32_External_Rela)))
-	    return false;
-	}
-
-      if (reltext)
-	{
-	  if (!add_dynamic_entry (DT_TEXTREL, 0))
-	    return false;
-	  info->flags |= DF_TEXTREL;
-	}
-    }
-#undef add_dynamic_entry
-
-  /* If we are generating a shared library, we generate a section
-     symbol for each output section.  These are local symbols, which
-     means that they must come first in the dynamic symbol table.
-     That means we must increment the dynamic symbol index of every
-     other dynamic symbol.
-
-     FIXME: We assume that there will never be relocations to
-     locations in linker-created sections that do not have
-     externally-visible names. Instead, we should work out precisely
-     which sections relocations are targeted at.  */
-  if (bfd_link_pic (info))
-    {
-      int c;
-
-      for (c = 0, s = output_bfd->sections; s != NULL; s = s->next)
-	{
-	  if ((s->flags & SEC_LINKER_CREATED) != 0
-	      || (s->flags & SEC_ALLOC) == 0)
-	    {
-	      elf_section_data (s)->dynindx = -1;
-	      continue;
-	    }
-
-	  /* These symbols will have no names, so we don't need to
-	     fiddle with dynstr_index.  */
-
-	  elf_section_data (s)->dynindx = c + 1;
-
-	  c++;
-	}
-
-      elf_link_hash_traverse (elf_hash_table (info),
-			      i370_elf_adjust_dynindx, & c);
-      elf_hash_table (info)->dynsymcount += c;
-    }
-
-  return true;
 }
 
 /* Look through the relocs for a section during the first phase, and
@@ -1030,7 +794,7 @@ i370_elf_finish_dynamic_sections (bfd *output_bfd,
    section, which means that the addend must be adjusted
    accordingly.  */
 
-static bool
+static int
 i370_elf_relocate_section (bfd *output_bfd,
 			   struct bfd_link_info *info,
 			   bfd *input_bfd,
@@ -1371,6 +1135,15 @@ i370_elf_relocate_section (bfd *output_bfd,
 
   return ret;
 }
+
+static bool
+i370_elf_finish_dynamic_symbol(bfd *,
+                               struct bfd_link_info *,
+                               struct elf_link_hash_entry *,
+                               Elf_Internal_Sym *)
+{
+	return true;
+}
 
 #define TARGET_BIG_SYM		i370_elf32_vec
 #define TARGET_BIG_NAME		"elf32-i370"
@@ -1396,23 +1169,12 @@ i370_elf_relocate_section (bfd *output_bfd,
 /* Dynamic loader support is mostly broken; just enough here to be able to
    link glibc's ld.so without errors.  */
 #define elf_backend_create_dynamic_sections	i370_elf_create_dynamic_sections
-#define elf_backend_size_dynamic_sections	i370_elf_size_dynamic_sections
 #define elf_backend_init_index_section		_bfd_elf_init_1_index_section
 #define elf_backend_finish_dynamic_sections	i370_elf_finish_dynamic_sections
 #define elf_backend_fake_sections		i370_elf_fake_sections
 #define elf_backend_section_from_shdr		i370_elf_section_from_shdr
 #define elf_backend_adjust_dynamic_symbol	i370_elf_adjust_dynamic_symbol
 #define elf_backend_check_relocs		i370_elf_check_relocs
-
-static int
-i370_noop (void)
-{
-  return 1;
-}
-
-#define elf_backend_finish_dynamic_symbol \
-  (bool (*) \
-     (bfd *, struct bfd_link_info *, struct elf_link_hash_entry *, \
-      Elf_Internal_Sym *)) i370_noop
+#define elf_backend_finish_dynamic_symbol i370_elf_finish_dynamic_symbol
 
 #include "elf32-target.h"
