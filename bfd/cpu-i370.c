@@ -36,11 +36,12 @@ static const bfd_arch_info_type arch_info_struct[] =
     "i370",
     "i370:360",
     3,
-    FALSE,	/* Not the default.  */
+    false,	/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
     bfd_arch_default_fill,
-    &arch_info_struct[1]
+    &arch_info_struct[1],
+    0 /* Maximum offset of a reloc from the start of an insn.  */ \
   },
   {
     32,		/* 32 bits in a word.  */
@@ -51,11 +52,12 @@ static const bfd_arch_info_type arch_info_struct[] =
     "i370",
     "i370:370",
     3,
-    FALSE,	/* Not the default.  */
+    false,	/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
     bfd_arch_default_fill,
-    0
+    0,
+    0 /* Maximum offset of a reloc from the start of an insn.  */ \
   },
 };
 
@@ -69,9 +71,10 @@ const bfd_arch_info_type bfd_i370_arch =
   "i370",
   "i370:common",
   3,
-  TRUE,		/* The default.  */
+  true,		/* The default.  */
   bfd_default_compatible,
   bfd_default_scan,
   bfd_arch_default_fill,
-  & arch_info_struct[0]
+  & arch_info_struct[0],
+  0 /* Maximum offset of a reloc from the start of an insn.  */ \
 };
