@@ -54,6 +54,7 @@
 #define ARCH_ft32
 #define ARCH_h8300
 #define ARCH_hppa
+#define ARCH_i370
 #define ARCH_i386
 #define ARCH_ip2k
 #define ARCH_iq2000
@@ -207,6 +208,11 @@ disassembler (enum bfd_architecture a,
 #ifdef ARCH_hppa
     case bfd_arch_hppa:
       disassemble = print_insn_hppa;
+      break;
+#endif
+#ifdef ARCH_i370
+    case bfd_arch_i370:
+      disassemble = print_insn_i370;
       break;
 #endif
 #ifdef ARCH_i386
