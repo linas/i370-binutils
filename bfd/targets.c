@@ -740,6 +740,7 @@ extern const bfd_target hppa_elf32_nbsd_vec;
 extern const bfd_target hppa_elf64_vec;
 extern const bfd_target hppa_elf64_linux_vec;
 extern const bfd_target hppa_som_vec;
+extern const bfd_target i370_elf32_vec;
 extern const bfd_target i386_aout_vec;
 extern const bfd_target i386_aout_bsd_vec;
 extern const bfd_target i386_aout_lynx_vec;
@@ -1088,6 +1089,8 @@ static const bfd_target * const _bfd_target_vector[] =
 	&hppa_elf64_linux_vec,
 #endif
 	&hppa_som_vec,
+
+	&i370_elf32_vec,
 
 	&i386_aout_vec,
 	&i386_aout_bsd_vec,

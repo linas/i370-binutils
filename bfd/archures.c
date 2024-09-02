@@ -210,6 +210,7 @@ DESCRIPTION
 .#define bfd_mach_iamcu			(1 << 8)
 .#define bfd_mach_i386_iamcu		(bfd_mach_i386_i386 | bfd_mach_iamcu)
 .#define bfd_mach_i386_iamcu_intel_syntax (bfd_mach_i386_iamcu | bfd_mach_i386_intel_syntax)
+.  bfd_arch_i370,      {* IBM 360/370 Mainframes.  *}
 .  bfd_arch_romp,      {* IBM ROMP PC/RT.  *}
 .  bfd_arch_convex,    {* Convex.  *}
 .  bfd_arch_m98k,      {* Motorola 98xxx.  *}
@@ -651,6 +652,7 @@ extern const bfd_arch_info_type bfd_fr30_arch;
 extern const bfd_arch_info_type bfd_frv_arch;
 extern const bfd_arch_info_type bfd_h8300_arch;
 extern const bfd_arch_info_type bfd_hppa_arch;
+extern const bfd_arch_info_type bfd_i370_arch;
 extern const bfd_arch_info_type bfd_i386_arch;
 extern const bfd_arch_info_type bfd_iamcu_arch;
 extern const bfd_arch_info_type bfd_ia64_arch;
@@ -740,6 +742,7 @@ static const bfd_arch_info_type * const bfd_archures_list[] =
     &bfd_frv_arch,
     &bfd_h8300_arch,
     &bfd_hppa_arch,
+    &bfd_i370_arch,
     &bfd_i386_arch,
     &bfd_iamcu_arch,
     &bfd_ia64_arch,
