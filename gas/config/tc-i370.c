@@ -884,12 +884,37 @@ i370_csect (int unused ATTRIBUTE_UNUSED)
 }
 
 
-/* DC Define Const  is only partially supported.
-   For sample code on what to do, look at i370_elf_cons() above.
+static void
+i370_atof (int type, int subtype, char *litp, int *sizep)
+{
+  /* 360/370/390 have two three formats:
+     H Hex, which is the old-style, 24-bit or 56-bit mantissa
+     B Binary, which is IEEE, 24-bit or 53-bit mantissa
+     D Decimal, which is uhh, decimal.
+  */
+  switch (subtype)
+    {
+    case 'B':
+      ieee_md_atof (type, litp, sizep, true);
+      break;
+    case 'H':
+    case 'D':
+      as_bad (_("unsupported floating point type"));
+      break;
+    default:
+      as_bad (_("unknown floating point type"));
+    }
+}
+
+/* DC Define Const  is only partially supported. Mostly it handles
+   floats and doubles, and nothing more.
+   For sample code on handling other constants, look at i370_elf_cons()
+   and also at i370_addr_cons().
+
    This code handles pseudoops of the style
    DC   D'3.141592653'   # in sysv4, .double 3.14159265
-   DC   F'1'             # in sysv4, .long   1.  */
-
+   DC   F'1'             # in sysv4, .long   1.
+ */
 static void
 i370_dc (int unused ATTRIBUTE_UNUSED)
 {
@@ -897,6 +922,7 @@ i370_dc (int unused ATTRIBUTE_UNUSED)
   int nbytes=0;
   expressionS exp;
   char type=0;
+  char subtype=0;
   char * clse;
 
   if (is_it_end_of_statement ())
@@ -919,9 +945,27 @@ i370_dc (int unused ATTRIBUTE_UNUSED)
     case 'D':  /* 64-bit */
       nbytes = 8;
       break;
+    case 'L':  /* 128-bit */
+      nbytes = 16;
+      break;
     default:
       as_bad (_("unsupported DC type"));
       return;
+    }
+
+  subtype = *input_line_pointer++;
+  switch (subtype)
+    {
+    case 'H':  /* Hex */
+    case 'B':  /* Binary */
+    case 'D':  /* Decimal */
+      break;
+    case 'Q':  /* Hex */
+      subtype = 'H';
+      break;
+    default:
+      subtype = 'H'; /* If not specified, then Hex by defult */
+      input_line_pointer--;
     }
 
   /* Get rid of pesky quotes.  */
@@ -954,8 +998,9 @@ i370_dc (int unused ATTRIBUTE_UNUSED)
       break;
     case 'E':  /* 32-bit */
     case 'D':  /* 64-bit */
+    case 'L':  /* 128-bit */
       if ('E' == type) type = 'f';
-      md_atof (type, tmp, &nbytes);
+      i370_atof (type, subtype, tmp, &nbytes);
       p = frag_more (nbytes);
       memcpy (p, tmp, nbytes);
       break;
@@ -987,6 +1032,7 @@ i370_ds (int unused ATTRIBUTE_UNUSED)
 	  alignment = 2;
 	  break;
 	case 'D':  /* 64-bit */
+	case 'L':  /* 128-bit but 84-bit aligned */
 	  alignment = 3;
 	  break;
 	default:
@@ -1505,6 +1551,7 @@ i370_addr_cons (expressionS *exp)
     case 'X':
     case 'E':  /* Single-precision float point.  */
     case 'D':  /* Double-precision float point.  */
+    case 'L':  /* 128-bit float point.  */
 
       /* H == 16-bit fixed-point const; expression must be const.  */
       /* F == fixed-point const; expression must be const.  */
@@ -1514,6 +1561,7 @@ i370_addr_cons (expressionS *exp)
       else if ('X' == name[0]) cons_len = -1;
       else if ('E' == name[0]) cons_len = 4;
       else if ('D' == name[0]) cons_len = 8;
+      else if ('L' == name[0]) cons_len = 16;
 
       /* Extract length, if it is present;
 	 FIXME: assume single-digit length.  */
@@ -1549,7 +1597,7 @@ i370_addr_cons (expressionS *exp)
 	  else
 	    as_bad (_("missing end-quote"));
 	}
-      if (('X' == name[0]) || ('E' == name[0]) || ('D' == name[0]))
+      if (('X' == name[0]) || ('E' == name[0]) || ('D' == name[0]) || ('L' == name[0]))
 	{
 	  char tmp[50];
 	  char *save;
@@ -1601,7 +1649,7 @@ i370_addr_cons (expressionS *exp)
 	    else if ('D' == name[0]) /* 64-bit double */
 	      {
 		gen_to_words(fltnum, 4, 11);
-	   /* This is correct if host is LE, but what if host is BE? */
+		/* This is correct if host is LE, but what if host is BE? */
 		generic_bignum[0] = fltnum[3];
 		generic_bignum[1] = fltnum[2];
 		generic_bignum[2] = fltnum[1];
@@ -2396,8 +2444,8 @@ i370_tc (int ignore ATTRIBUTE_UNUSED)
 const char *
 md_atof (int type, char *litp, int *sizep)
 {
-  /* 360/370/390 have two float formats: an old, funky 360 single-precision
-     format, and the ieee format.  Support only the ieee format.  */
+  /* 360/370/390 have three three formats:
+     Hex, Binary and Decimal. Support ony "binary" (IEEE). */
   return ieee_md_atof (type, litp, sizep, true);
 }
 
