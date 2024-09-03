@@ -459,6 +459,7 @@ extract_rxf_r3 (insn, invalid)
 #define	IHX	I370_OPCODE_ESA390_HX
 #define	IIR	I370_OPCODE_ESA390_IR
 #define	IMI	I370_OPCODE_ESA390_MI
+#define	IN3	I370_OPCODE_ESA390_N3
 #define	IPC	I370_OPCODE_ESA390_PC
 #define	IPL	I370_OPCODE_ESA390_PL
 #define	IQR	I370_OPCODE_ESA390_QR
@@ -467,7 +468,11 @@ extract_rxf_r3 (insn, invalid)
 #define	ISG	I370_OPCODE_ESA390_SG
 #define	ISR	I370_OPCODE_ESA390_SR
 #define	ITR	I370_OPCODE_ESA390_SR
-#define	I390	IBF  | IBS | ICK | ICM | IIR | IFX | IHX | IMI | IPC | IPL | IQR | IRP | ISA | ISG | ISR | ITR | I370_OPCODE_ESA390
+
+#define IZN	I370_OPCODE_ZARCH_N
+
+#define ZARC	IZN | I370_OPCODE_ZARCH
+#define	I390	ZARC | IBF  | IBS | ICK | ICM | IIR | IFX | IHX | IMI | IN3 | IPC | IPL | IQR | IRP | ISA | ISG | ISR | ITR | I370_OPCODE_ESA390
 #define	IESA	I390 | I370_OPCODE_ESA370
 #define IXA	IESA | I370_OPCODE_370_XA
 #define	I370	IXA  | I370_OPCODE_370
@@ -572,9 +577,11 @@ const struct i370_opcode i370_opcodes[] = {
 { "cdbr",   4, {{RRE(0xb319,0,0),   0}}, {{RRE_MASK, 0}}, IBF,  {RRE_R1, RRE_R2} },
 { "cdfbr",  4, {{RRE(0xb395,0,0),   0}}, {{RRE_MASK, 0}}, IBF,  {RRE_R1, RRE_R2} },
 { "cdfr",   4, {{RRE(0xb3b5,0,0),   0}}, {{RRE_MASK, 0}}, IHX,  {RRE_R1, RRE_R2} },
+{ "cdgr",   4, {{RRE(0xb3c5,0,0),   0}}, {{RRE_MASK, 0}}, IZN,  {RRE_R1, RRE_R2} },
 { "cebr",   4, {{RRE(0xb309,0,0),   0}}, {{RRE_MASK, 0}}, IBF,  {RRE_R1, RRE_R2} },
 { "cefbr",  4, {{RRE(0xb394,0,0),   0}}, {{RRE_MASK, 0}}, IBF,  {RRE_R1, RRE_R2} },
 { "cefr",   4, {{RRE(0xb3b4,0,0),   0}}, {{RRE_MASK, 0}}, IHX,  {RRE_R1, RRE_R2} },
+{ "cegr",   4, {{RRE(0xb3c4,0,0),   0}}, {{RRE_MASK, 0}}, IZN,  {RRE_R1, RRE_R2} },
 { "cksm",   4, {{RRE(0xb241,0,0),   0}}, {{RRE_MASK, 0}}, ICK,  {RRE_R1, RRE_R2} },
 { "clst",   4, {{RRE(0xb25d,0,0),   0}}, {{RRE_MASK, 0}}, ISR,  {RRE_R1, RRE_R2} },
 { "cpya",   4, {{RRE(0xb24d,0,0),   0}}, {{RRE_MASK, 0}}, IESA, {RRE_R1, RRE_R2} },
@@ -582,6 +589,7 @@ const struct i370_opcode i370_opcodes[] = {
 { "cxbr",   4, {{RRE(0xb349,0,0),   0}}, {{RRE_MASK, 0}}, IBF,  {RRE_R1, RRE_R2} },
 { "cxfbr",  4, {{RRE(0xb396,0,0),   0}}, {{RRE_MASK, 0}}, IBF,  {RRE_R1, RRE_R2} },
 { "cxfr",   4, {{RRE(0xb3b6,0,0),   0}}, {{RRE_MASK, 0}}, IHX,  {RRE_R1, RRE_R2} },
+{ "cxgr",   4, {{RRE(0xb3c6,0,0),   0}}, {{RRE_MASK, 0}}, IZN,  {RRE_R1, RRE_R2} },
 { "cxr",    4, {{RRE(0xb369,0,0),   0}}, {{RRE_MASK, 0}}, IHX,  {RRE_R1, RRE_R2} },
 { "ddbr",   4, {{RRE(0xb31d,0,0),   0}}, {{RRE_MASK, 0}}, IBF,  {RRE_R1, RRE_R2} },
 { "debr",   4, {{RRE(0xb30d,0,0),   0}}, {{RRE_MASK, 0}}, IBF,  {RRE_R1, RRE_R2} },
@@ -674,6 +682,9 @@ const struct i370_opcode i370_opcodes[] = {
 { "cfer",   4, {{RRF(0xb3b8,0,0,0), 0}}, {{RRF_MASK, 0}}, IHX,  {RRF_R1, RRF_R3, RRF_R2} },
 { "cfxbr",  4, {{RRF(0xb39a,0,0,0), 0}}, {{RRF_MASK, 0}}, IBF,  {RRF_R1, RRF_R3, RRF_R2} },
 { "cfxr",   4, {{RRF(0xb3ba,0,0,0), 0}}, {{RRF_MASK, 0}}, IHX,  {RRF_R1, RRF_R3, RRF_R2} },
+{ "cgdr",   4, {{RRF(0xb3c9,0,0,0), 0}}, {{RRF_MASK, 0}}, IZN,  {RRF_R1, RRF_R3, RRF_R2} },
+{ "cger",   4, {{RRF(0xb3c8,0,0,0), 0}}, {{RRF_MASK, 0}}, IZN,  {RRF_R1, RRF_R3, RRF_R2} },
+{ "cgxr",   4, {{RRF(0xb3ca,0,0,0), 0}}, {{RRF_MASK, 0}}, IZN,  {RRF_R1, RRF_R3, RRF_R2} },
 { "didbr",  4, {{RRF(0xb35b,0,0,0), 0}}, {{RRF_MASK, 0}}, IBF,  {RRF_R1, RRF_R3, RRF_R2} },
 { "diebr",  4, {{RRF(0xb353,0,0,0), 0}}, {{RRF_MASK, 0}}, IBF,  {RRF_R1, RRF_R3, RRF_R2} },
 { "fidbr",  4, {{RRF(0xb35f,0,0,0), 0}}, {{RRF_MASK, 0}}, IBF,  {RRF_R1, RRF_R3, RRF_R2} },

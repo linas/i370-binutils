@@ -130,6 +130,15 @@ extern const int i370_num_opcodes;
 /* Opcode is defined for the ESA/390 w/ trap facility.  */
 #define I370_OPCODE_ESA390_TR (0x100000)
 
+/* Opcode is defined for the ESA/390 and also z/Architecture.  */
+#define I370_OPCODE_ESA390_N3 (0x200000)
+
+/* Opcode is defined for the z/Architecture.  */
+#define I370_OPCODE_ZARCH (0x400000)
+
+/* Opcode is defined for z/Architecture (only).  */
+#define I370_OPCODE_ZARCH_N (0x800000)
+
 #define I370_OPCODE_ESA390_SUPERSET (0x1fffff)
 
 
