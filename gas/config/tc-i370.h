@@ -41,6 +41,10 @@ extern int target_big_endian;
 /* Permit temporary numeric labels.  */
 #define LOCAL_LABELS_FB 1
 
+/* Single quotes are used for literals,
+ * e.g. =E'3.14159' or =XL4'cacad0d0' */
+#define SINGLE_QUOTE_STRINGS
+
 /* $ is used to refer to the current location.  */
 /* #define DOLLAR_DOT */
 
