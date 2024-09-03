@@ -22,8 +22,16 @@
          MVC   84(4,r13),=EB'+inf'
          MVC   84(4,r13),=EB'-inf'
          MVC   84(4,r13),=EB'0.0314159E2'
+         MVC   84(4,r13),=EH'0.0314159E2'
          MVC   84(4,r13),=EB'-3.14159'
-         MVC   84(4,r13),=EH'-3.14159'
+         MVC   84(4,r13),=EH'3.14159'
+         MVC   84(4,r13),=E'3.1415926'
+         MVC   84(4,r13),=E'3.141592653'
+         MVC   84(4,r13),=E'3.14159265348979'
+         MVC   84(4,r13),=E'27.1828'
+         MVC   84(4,r13),=E'314.159'
+         MVC   84(4,r13),=E'314.159E-30'
+         MVC   84(4,r13),=E'314.159E+30'
          MVC   92(8,r13),=XL8'C1C2C3C4C5C6C7C8'
 # D and DH are both IBM double-precision floating point Hex
 # DB is "double floating point binary" aka IEEE float
