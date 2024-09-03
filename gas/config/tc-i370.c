@@ -1616,6 +1616,36 @@ gen_to_decimal_words (LITTLENUM_TYPE *, int)
   as_bad ("IBM Decimal floats currently not supported");
 }
 
+/* Create IBM Floating Point Hex. This is probably wrong,
+   Its a crude approximation for what it should be.
+ */
+static void
+gen_to_hex_words (LITTLENUM_TYPE *words, int type)
+{
+  memset(words, 0, BIGNUM_CACHE * sizeof(LITTLENUM_TYPE));
+
+  /* Sign bits other than +/- are NaN and inf and qNaN and so on.
+     See struct FLONUM_STRUCT for details. */
+  if ('-' == generic_floating_point_number.sign)
+    words[0] = 0x8000;
+  else if ('+' != generic_floating_point_number.sign)
+    as_bad("unhandled sign value in float point");
+
+  /* The below is incorrect, but vaguely approximate for
+     the IBM hex format. It generates 8-bit exponents and
+     24 or 56-bit mantissas.
+     See atof-ieee.c gen_to_words() for example.
+     It's ... complicated. */
+  if ('E' == type)
+    {
+      gen_to_words(words, 2, 8);
+    }
+  else if ('D' == type)
+    {
+      gen_to_words(words, 4, 8);
+    }
+}
+
 /* handle address constants of various sorts */
 /* The currently supported types are
  *    =A(some_symb)
@@ -1766,7 +1796,13 @@ i370_addr_cons (expressionS *exp)
 	       * The add_to_lit_pool will cache this, for later playback. */
 	      if ('E' == name[0]) /* 32-bit float */
 		{
-		  gen_to_words(fltnum, 2, 8);
+		  if ('B' == name[1]) /* IEEE float */
+		    gen_to_words(fltnum, 2, 8);
+		  else if ('D' == name[1]) /* Decimal */
+		    gen_to_decimal_words(fltnum, name[0]);
+		  else /* Assume "Floating Point Hex" aka old-style IBM */
+		    gen_to_hex_words(fltnum, name[0]);
+
 		  generic_bignum[0] = fltnum[1];
 		  generic_bignum[1] = fltnum[0];
 		}
@@ -1777,9 +1813,8 @@ i370_addr_cons (expressionS *exp)
 		  else if ('D' == name[1]) /* Decimal */
 		    gen_to_decimal_words(fltnum, name[0]);
 		  else /* Assume "Floating Point Hex" aka old-style IBM */
-		    gen_to_words(fltnum, 4, 8);
+		    gen_to_hex_words(fltnum, name[0]);
 
-		  gen_to_words(fltnum, 4, 11);
 		  /* This is correct if host is LE, but what if host is BE? */
 		  generic_bignum[0] = fltnum[3];
 		  generic_bignum[1] = fltnum[2];
@@ -1793,8 +1828,7 @@ i370_addr_cons (expressionS *exp)
 		  else if ('D' == name[1]) /* Decimal */
 		    gen_to_decimal_words(fltnum, name[0]);
 		  else /* Assume "Floating Point Hex" aka old-style IBM */
-		    /* XXX This probably does the wrong thing!? */
-		    gen_to_words(fltnum, 8, 16);
+		    gen_to_hex_words(fltnum, name[0]);
 
 		  /* This is correct if host is LE, but what if host is BE? */
 		  generic_bignum[0] = fltnum[7];
