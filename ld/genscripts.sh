@@ -142,6 +142,11 @@ shift 5
 EMULATION_NAME=$1
 TOOL_LIB=$2
 
+# If building somewhere other than the source directory, the
+# build will fail to create ldscripts/${EMULATION_NAME}.xr
+# because the the ldscripts directory is absent. So make it now.
+mkdir ldscripts
+
 source_sh()
 {
   if test -n "${DEPDIR}"; then
