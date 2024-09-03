@@ -139,7 +139,10 @@ extern const int i370_num_opcodes;
 /* Opcode is defined for z/Architecture (only).  */
 #define I370_OPCODE_ZARCH_N (0x800000)
 
-#define I370_OPCODE_ESA390_SUPERSET (0x1fffff)
+/* Opcode is defined for z/Architecture w/ binary floating-point (BFP) facility  */
+#define I370_OPCODE_ZARCH_BF (0x1000000)
+
+#define I370_OPCODE_ZARCH_SUPERSET (0x1ffffff)
 
 
 /* The operands table is an array of struct i370_operand.  */

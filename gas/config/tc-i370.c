@@ -541,7 +541,7 @@ i370_set_cpu ()
   const char *default_cpu = TARGET_CPU;
 
   /* override with the superset for the moment.  */
-  i370_cpu = I370_OPCODE_ESA390_SUPERSET;
+  i370_cpu = I370_OPCODE_ZARCH_SUPERSET;
   if (i370_cpu == 0)
     {
       if (strcmp (default_cpu, "i360") == 0)
@@ -550,6 +550,12 @@ i370_set_cpu ()
         i370_cpu = I370_OPCODE_370;
       else if (strcmp (default_cpu, "XA") == 0)
         i370_cpu = I370_OPCODE_370_XA;
+      else if (strcmp (default_cpu, "ESA") == 0)
+        i370_cpu = I370_OPCODE_ESA390;
+      else if (strcmp (default_cpu, "ESA390") == 0)
+        i370_cpu = I370_OPCODE_ESA390;
+      else if (strcmp (default_cpu, "zArch") == 0)
+        i370_cpu = I370_OPCODE_ZARCH;
       else
         as_fatal ("Unknown default cpu = %s, os = %s", default_cpu, default_os);
     }
