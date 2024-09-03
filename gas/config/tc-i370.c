@@ -960,7 +960,7 @@ i370_dc (int unused ATTRIBUTE_UNUSED)
     case 'B':  /* Binary */
     case 'D':  /* Decimal */
       break;
-    case 'Q':  /* Hex */
+    case 'Q':  /* Hex, Quadword alignment. */
       subtype = 'H';
       break;
     default:
@@ -1233,16 +1233,17 @@ i370_elf_validate_fix (fixS *fixp, segT seg)
      -- it's used to generate the *_poolP symbol name.  */
 
 #define MAX_LITERAL_POOL_SIZE 1024
+#define BIGNUM_CACHE 8    /* Eight LITTLENUM_TYPE's so 16 bytes total */
 
 typedef struct literalS
 {
   struct expressionS  exp;
   char * sym_name;
-  char size;  /* 1,2,4 or 8 */
+  char size;  /* 1,2,4,8 or 16 */
   short offset;
 
   /* Cache for generic_floating_point_number and generic_bignum */
-  LITTLENUM_TYPE bignum[4];
+  LITTLENUM_TYPE bignum[BIGNUM_CACHE];
 } literalT;
 
 literalT literals[MAX_LITERAL_POOL_SIZE];
@@ -1298,7 +1299,7 @@ add_to_lit_pool (expressionS *exx, char *name, int sz)
   int offset_in_pool = 0;
 
   /* Start a new pool, if necessary.  */
-  if (8 == sz && NULL == longlong_poolP)
+  if ((8 == sz || 16 == sz) && NULL == longlong_poolP)
     longlong_poolP = symbol_make_empty ();
   else if (4 == sz && NULL == word_poolP)
     word_poolP = symbol_make_empty ();
@@ -1343,14 +1344,11 @@ add_to_lit_pool (expressionS *exx, char *name, int sz)
 	literals[next_literal_pool_place].sym_name = NULL;
 
       /* Cache the value of generic_bignum; we need this later,
-       * when issueing the ltorg */
+       * when issueing the ltorg. Cache 16 bytes total.  */
       if (exx->X_op == O_big)
-        {
-	  literals[next_literal_pool_place].bignum[0] = generic_bignum[0];
-	  literals[next_literal_pool_place].bignum[1] = generic_bignum[1];
-	  literals[next_literal_pool_place].bignum[2] = generic_bignum[2];
-	  literals[next_literal_pool_place].bignum[3] = generic_bignum[3];
-        }
+	memcpy (literals[next_literal_pool_place].bignum,
+	       generic_bignum, BIGNUM_CACHE * sizeof(LITTLENUM_TYPE));
+
       next_literal_pool_place++;
     }
 
@@ -1359,7 +1357,7 @@ add_to_lit_pool (expressionS *exx, char *name, int sz)
      literal pool to this expr minus the location of the most
      recent .using directive.  Thus, the grand total value of the
      expression is the distance from .using to the literal.  */
-  if (8 == sz)
+  if (8 == sz || 16 == sz)
     exx->X_add_symbol = longlong_poolP;
   else if (4 == sz)
     exx->X_add_symbol = word_poolP;
@@ -1505,6 +1503,13 @@ i370_addr_offset (expressionS *exx)
   return true;
 }
 
+/* Create IBM Floating Point Decimal */
+static void
+gen_to_decimal_words (LITTLENUM_TYPE *, int)
+{
+  as_bad (_("IBM Decimal floats currently not supported"));
+}
+
 /* Handle address constants of various sorts.  */
 /* The currently supported types are
       =A(some_symb)
@@ -1572,6 +1577,11 @@ i370_addr_cons (expressionS *exp)
 	  input_line_pointer += 2;
 	}
 
+      /* Advance past subtype modifier for float point */
+      if (('E' == name[0] || 'D' == name[0] || 'L' == name[0]) &&
+          ('B' == name[1] || 'H' == name[1] || 'D' == name[1]))
+	input_line_pointer++;
+
       ++input_line_pointer;
 
       /* Get rid of pesky quotes.  */
@@ -1586,6 +1596,7 @@ i370_addr_cons (expressionS *exp)
 	  else
 	    as_bad (_("missing end-quote"));
 	}
+
       if ('\"' == *input_line_pointer)
 	{
 	  char * clse;
@@ -1597,6 +1608,7 @@ i370_addr_cons (expressionS *exp)
 	  else
 	    as_bad (_("missing end-quote"));
 	}
+
       if (('X' == name[0]) || ('E' == name[0]) || ('D' == name[0]) || ('L' == name[0]))
 	{
 	  char tmp[50];
@@ -1619,6 +1631,7 @@ i370_addr_cons (expressionS *exp)
 		}
 	      cons_len = (hex_len+1) /2;
 	    }
+
 	  /* I believe this works even for =XL8'dada0000beeebaaa'
 	     which should parse out to X_op == O_big
 	     Note that floats and doubles get represented as
@@ -1635,7 +1648,7 @@ i370_addr_cons (expressionS *exp)
 	  /* Fix up lengths for floats and doubles.  */
 	  if (O_big == exp->X_op)
 	  {
-	    LITTLENUM_TYPE fltnum[4];
+	    LITTLENUM_TYPE fltnum[BIGNUM_CACHE];
 	    exp->X_add_number = cons_len / CHARS_PER_LITTLENUM;
 
 	    /* Convert generic_floating_point_number to bignum.
@@ -1648,12 +1661,38 @@ i370_addr_cons (expressionS *exp)
 	      }
 	    else if ('D' == name[0]) /* 64-bit double */
 	      {
-		gen_to_words(fltnum, 4, 11);
+		if ('B' == name[1]) /* IEEE double */
+		  gen_to_words(fltnum, 4, 11);
+		else if ('D' == name[1]) /* Decimal */
+		  gen_to_decimal_words(fltnum, name[0]);
+		else /* Assume "Floating Point Hex" aka old-style IBM */
+		  gen_to_words(fltnum, 4, 8);
+
 		/* This is correct if host is LE, but what if host is BE? */
 		generic_bignum[0] = fltnum[3];
 		generic_bignum[1] = fltnum[2];
 		generic_bignum[2] = fltnum[1];
 		generic_bignum[3] = fltnum[0];
+	      }
+	    else if ('L' == name[0]) /* 128-bit double */
+	      {
+		if ('B' == name[1]) /* IEEE double */
+		  gen_to_words(fltnum, 8, 16);
+		else if ('D' == name[1]) /* Decimal */
+		  gen_to_decimal_words(fltnum, name[0]);
+		else /* Assume "Floating Point Hex" aka old-style IBM */
+		  /* XXX This probably does the wrong thing!? */
+		  gen_to_words(fltnum, 8, 16);
+
+		/* This is correct if host is LE, but what if host is BE? */
+		generic_bignum[0] = fltnum[7];
+		generic_bignum[1] = fltnum[6];
+		generic_bignum[2] = fltnum[5];
+		generic_bignum[3] = fltnum[4];
+		generic_bignum[4] = fltnum[3];
+		generic_bignum[5] = fltnum[2];
+		generic_bignum[6] = fltnum[1];
+		generic_bignum[7] = fltnum[0];
 	      }
 	  }
 	}
