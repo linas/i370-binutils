@@ -92,9 +92,9 @@ S/370 options: (these have not yet been tested and may not work) \n\
 }
 
 /* Whether to use user friendly register names.  */
-#define TARGET_REG_NAMES_P TRUE
+#define TARGET_REG_NAMES_P true
 
-static bfd_boolean reg_names_p = TARGET_REG_NAMES_P;
+static bool reg_names_p = TARGET_REG_NAMES_P;
 
 
 /* Predefined register names if -mregnames
@@ -246,7 +246,7 @@ reg_name_search (const struct pd_reg *regs,
           Input_line_pointer->(next non-blank) char after operand, or is in its
         original state.  */
 
-static bfd_boolean
+static bool
 register_name (expressionS *expressionP)
 {
   int reg_number;
@@ -260,7 +260,7 @@ register_name (expressionS *expressionP)
     name = ++input_line_pointer;
 
   else if (!reg_names_p)
-    return FALSE;
+    return false;
 
   while (' ' == *name)
     name = ++input_line_pointer;
@@ -287,12 +287,12 @@ register_name (expressionS *expressionP)
       /* Make the rest nice.  */
       expressionP->X_add_symbol = NULL;
       expressionP->X_op_symbol = NULL;
-      return TRUE;
+      return true;
     }
 
   /* Reset the line as if we had not done anything.  */
   input_line_pointer = start;
-  return FALSE;
+  return false;
 }
 
 /* Local variables.  */
@@ -396,10 +396,10 @@ md_parse_option (int c, const char *arg)
 	i370_cpu = I370_OPCODE_370;
 
       else if (strcmp (arg, "regnames") == 0)
-	reg_names_p = TRUE;
+	reg_names_p = true;
 
       else if (strcmp (arg, "no-regnames") == 0)
-	reg_names_p = FALSE;
+	reg_names_p = false;
 
 #ifdef OBJ_ELF
       /* -mrelocatable/-mrelocatable-lib -- warn about
@@ -488,7 +488,7 @@ md_begin (void)
   const struct i370_opcode *op_end;
   const struct i370_macro *macro;
   const struct i370_macro *macro_end;
-  bfd_boolean dup_insn = FALSE;
+  bool dup_insn = false;
 
   i370_set_cpu ();
 
@@ -512,7 +512,7 @@ md_begin (void)
            if (str_hash_insert (i370_hash, op->name, (void *) op, 0) != NULL)
              {
                as_bad (_("Internal assembler error for instruction %s"), op->name);
-               dup_insn = TRUE;
+               dup_insn = true;
              }
          }
      }
@@ -528,7 +528,7 @@ md_begin (void)
           if (str_hash_insert (i370_macro_hash, macro->name, (void *) macro, 0) != NULL)
             {
               as_bad (_("Internal assembler error for macro %s"), macro->name);
-              dup_insn = TRUE;
+              dup_insn = true;
             }
         }
     }
@@ -1400,7 +1400,7 @@ symbol_locate (symbolS *symbolP,
    register operands. For example, "BL .L33" branch low
    to .L33 RX form insn frequently terminates for-loops.  */
 
-static bfd_boolean
+static bool
 i370_addr_offset (expressionS *exx)
 {
   char *dot, *lab;
@@ -1438,7 +1438,7 @@ i370_addr_offset (expressionS *exx)
   dot = strchr (input_line_pointer, '*');
 
   if (!dot && !islabel)
-    return FALSE;
+    return false;
 
   /* Replace * with . and let expr munch on it.  */
   if (dot)
@@ -1456,7 +1456,7 @@ i370_addr_offset (expressionS *exx)
   if (dot)
     *dot = '*';
 
-  return TRUE;
+  return true;
 }
 
 /* Handle address constants of various sorts.  */
@@ -1467,7 +1467,7 @@ i370_addr_offset (expressionS *exx)
       =F'1234'        32-bit const int
       =H'1234'        16-bit const int.  */
 
-static bfd_boolean
+static bool
 i370_addr_cons (expressionS *exp)
 {
   char *name;
@@ -1482,7 +1482,7 @@ i370_addr_cons (expressionS *exp)
   if (name[0] == '=' && ISALPHA (name[1]))
     name = ++input_line_pointer;
   else
-    return FALSE;
+    return false;
 
   switch (name[0])
     {
@@ -1616,17 +1616,17 @@ i370_addr_cons (expressionS *exp)
       if ((exp->X_op != O_constant) && (exp->X_op != O_big))
 	{
 	  as_bad (_("expression not a constant"));
-	  return FALSE;
+	  return false;
 	}
       add_to_lit_pool (exp, 0x0, cons_len);
       break;
 
     default:
       as_bad (_("Unknown/unsupported address literal type"));
-      return FALSE;
+      return false;
     }
 
-  return TRUE;
+  return true;
 }
 
 
@@ -2398,7 +2398,7 @@ md_atof (int type, char *litp, int *sizep)
 {
   /* 360/370/390 have two float formats: an old, funky 360 single-precision
      format, and the ieee format.  Support only the ieee format.  */
-  return ieee_md_atof (type, litp, sizep, TRUE);
+  return ieee_md_atof (type, litp, sizep, true);
 }
 
 /* Write a value out to the object file, using the appropriate
