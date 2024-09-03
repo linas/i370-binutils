@@ -37,8 +37,11 @@ support was removed after binutils-2.30. This is why you are here,
 reading this. The goal here is to modernize and update.
 
 Multiple bugs have been reported, and are fixed in this repo:
-* Bitrot with respect to relative operands
-* Broken bignum (64-bit) support, affecting double floating-point.
+* Bitrot with respect to relative operands. The offsets in the literal
+  table for `=A` address constants were incorrect.
+* Broken bignum (64-bit) support. This affected `=XL8` literals on
+  32-bit arches, as well as `=E` floating point and `=D`
+  double-precision contants.
 
 The above fixes can be found in three branches: 2.14, 2.30 and master.
 
@@ -83,6 +86,7 @@ mkdir build; cd build
 ../configure --target=i370-ibm-linux
 make -j
 ```
+
 
 #### Examples
 Bug fixes can be verified with the example source demos:
