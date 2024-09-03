@@ -63,6 +63,7 @@ The following should work:
 git checkout i370-binutils-2_14
 mkdir build; cd build
 ../configure --target=i370-ibm-linux
+make -j
 ```
 
 #### Version 2.30
@@ -71,6 +72,16 @@ The following should work:
 git checkout i370-binutils-2_30
 mkdir build; cd build
 ../configure --target=i370-ibm-linux --enable-obsolete
+make -j
+```
+
+#### Version 2.43
+The following should work:
+```
+git checkout master
+mkdir build; cd build
+../configure --target=i370-ibm-linux
+make -j
 ```
 
 #### Examples
