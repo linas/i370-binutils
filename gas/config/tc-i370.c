@@ -455,7 +455,7 @@ i370_set_cpu (void)
   const char *default_cpu = TARGET_CPU;
 
   /* Override with the superset for the moment.  */
-  i370_cpu = I370_OPCODE_ESA390_SUPERSET;
+  i370_cpu = I370_OPCODE_ZARCH_SUPERSET;
   if (i370_cpu == 0)
     {
       if (strcmp (default_cpu, "i360") == 0)
@@ -464,6 +464,12 @@ i370_set_cpu (void)
         i370_cpu = I370_OPCODE_370;
       else if (strcmp (default_cpu, "XA") == 0)
         i370_cpu = I370_OPCODE_370_XA;
+      else if (strcmp (default_cpu, "ESA") == 0)
+        i370_cpu = I370_OPCODE_ESA390;
+      else if (strcmp (default_cpu, "ESA390") == 0)
+        i370_cpu = I370_OPCODE_ESA390;
+      else if (strcmp (default_cpu, "zArch") == 0)
+        i370_cpu = I370_OPCODE_ZARCH;
       else
         as_fatal ("Unknown default cpu = %s, os = %s", default_cpu, default_os);
     }
@@ -1720,12 +1726,11 @@ i370_addr_cons (expressionS *exp)
 	    else if ('L' == name[0]) /* 128-bit double */
 	      {
 		if ('B' == name[1]) /* IEEE double */
-		  gen_to_words(fltnum, 8, 16);
+		  gen_to_words(fltnum, 8, 15);
 		else if ('D' == name[1]) /* Decimal */
 		  gen_to_decimal_words(fltnum, name[0]);
 		else /* Assume "Floating Point Hex" aka old-style IBM */
-		  /* XXX This probably does the wrong thing!? */
-		  gen_to_words(fltnum, 8, 16);
+		  gen_to_hex_words(fltnum, name[0]);
 
 		/* This is correct if host is LE, but what if host is BE? */
 		generic_bignum[0] = fltnum[7];
