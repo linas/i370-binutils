@@ -1047,6 +1047,7 @@ const struct i370_opcode i370_opcodes[] = {
 { "lasp",   6, {{SSEH(0xe500,0,0), 0}}, {{SSE_MASK, 0}}, IXA,  {SS_D1, SS_B1, SS_D2, SS_B2} },
 { "mvcdk",  6, {{SSEH(0xe50f,0,0), 0}}, {{SSE_MASK, 0}}, IESA, {SS_D1, SS_B1, SS_D2, SS_B2} },
 { "mvcsk",  6, {{SSEH(0xe50e,0,0), 0}}, {{SSE_MASK, 0}}, IESA, {SS_D1, SS_B1, SS_D2, SS_B2} },
+{ "strag",  6, {{SSEH(0xe502,0,0), 0}}, {{SSE_MASK, 0}}, IZN,  {SS_D1, SS_B1, SS_D2, SS_B2} },
 { "tprot",  6, {{SSEH(0xe501,0,0), 0}}, {{SSE_MASK, 0}}, IXA,  {SS_D1, SS_B1, SS_D2, SS_B2} },
 
 /* */
