@@ -1023,6 +1023,7 @@ const struct i370_opcode i370_opcodes[] = {
 { "dp",     6, {{SSH(0xfd,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
 { "ed",     6, {{SSH(0xde,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
 { "edmk",   6, {{SSH(0xdf,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
+{ "lmd",    6, {{SSH(0xef,0,0,0),  0}}, {{SS_MASK,  0}}, IZN, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
 { "mvc",    6, {{SSH(0xd2,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
 { "mvcin",  6, {{SSH(0xe8,0,0,0),  0}}, {{SS_MASK,  0}}, IMI,  {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
 { "mvck",   6, {{SSH(0xd9,0,0,0),  0}}, {{SS_MASK,  0}}, IXA,  {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
