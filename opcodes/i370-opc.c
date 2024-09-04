@@ -461,6 +461,21 @@ extract_rxf_r3 (insn, invalid)
 
 #define RIEL_MASK RIEL (0xff)
 
+/* An RSE form instruction high word.  */
+#define RSEH(op, r1, b3, b2, d2) \
+  (XOPS(op) | ((((unsigned short) (r1)) & 0xf) << 20) |  \
+              ((((unsigned short) (b3)) & 0xf) << 16) |  \
+              ((((unsigned short) (b2)) & 0xf) << 12) |  \
+              ((((unsigned short) (d2)) & 0xfff)))
+
+#define RSEH_MASK RSEH (0xff, 0x0, 0x0, 0x0, 0x0)
+
+/* An RSE form instruction low word.  */
+#define RSEL(op) \
+              ((((unsigned short) (op)) & 0xff) << 16 )
+
+#define RSEL_MASK RSEL (0xff)
+
 /* An SI form instruction.  */
 #define SI(op, i2, b1, d1) \
   (XOPS(op) | ((((unsigned short)(i2)) & 0xff) << 16) |  \
@@ -552,7 +567,20 @@ extract_rxf_r3 (insn, invalid)
    The disassembler reads the table in order and prints the first
    instruction which matches, so this table is sorted to put more
    specific instructions before more general instructions.  It is also
-   sorted by major opcode.  */
+   sorted by major opcode.
+
+   This table lists most opcodes described in
+       z/Architecture Principles of Operation First Edition (December 2000)
+   This is enough to support the insns emitted by the gcc i370 compiler.
+   Some things that are missing:
+   -- E2 insns (Extended-translation facility 2)
+   -- VF insns (Vector facility for z/Architecture)
+
+   There are more insns, found in
+       z/Architecture Reference Summary Eleventh Edition (September, 2019)
+   These are not currently supported, mostly because no one has asked
+   for them.
+*/
 
 const struct i370_opcode i370_opcodes[] = {
 
@@ -1026,6 +1054,28 @@ const struct i370_opcode i370_opcodes[] = {
 /* RIE form instructions.  */
 { "brxhg",  6, {{RIEH(0xec,0,0,0), RIEL(0x44)}}, {{RIEH_MASK, RIEL_MASK}}, IZN, {RSI_R1, RSI_R3, RSI_I2} },
 { "brxlg",  6, {{RIEH(0xec,0,0,0), RIEL(0x45)}}, {{RIEH_MASK, RIEL_MASK}}, IZN, {RSI_R1, RSI_R3, RSI_I2} },
+
+/* RSE form instructions.  */
+{ "bxhg",   6, {{RSEH(0xeb,0,0,0,0), RSEL(0x44)}}, {{RSEH_MASK, RSEL_MASK}}, IZN, {RX_R1, RS_R3, RS_D2, RS_B2} },
+{ "bxleg",  6, {{RSEH(0xeb,0,0,0,0), RSEL(0x45)}}, {{RSEH_MASK, RSEL_MASK}}, IZN, {RX_R1, RS_R3, RS_D2, RS_B2} },
+{ "cdsg",   6, {{RSEH(0xeb,0,0,0,0), RSEL(0x3e)}}, {{RSEH_MASK, RSEL_MASK}}, IZN, {RX_R1, RS_R3, RS_D2, RS_B2} },
+{ "clmh",   6, {{RSEH(0xeb,0,0,0,0), RSEL(0x20)}}, {{RSEH_MASK, RSEL_MASK}}, IZN, {RX_R1, RS_R3, RS_D2, RS_B2} },
+{ "csg",    6, {{RSEH(0xeb,0,0,0,0), RSEL(0x30)}}, {{RSEH_MASK, RSEL_MASK}}, IZN, {RX_R1, RS_R3, RS_D2, RS_B2} },
+{ "icmh",   6, {{RSEH(0xeb,0,0,0,0), RSEL(0x80)}}, {{RSEH_MASK, RSEL_MASK}}, IZN, {RX_R1, RS_R3, RS_D2, RS_B2} },
+{ "lctlg",  6, {{RSEH(0xeb,0,0,0,0), RSEL(0x2f)}}, {{RSEH_MASK, RSEL_MASK}}, IZN, {RX_R1, RS_R3, RS_D2, RS_B2} },
+{ "lmg",    6, {{RSEH(0xeb,0,0,0,0), RSEL(0x04)}}, {{RSEH_MASK, RSEL_MASK}}, IZN, {RX_R1, RS_R3, RS_D2, RS_B2} },
+{ "lmh",    6, {{RSEH(0xeb,0,0,0,0), RSEL(0x96)}}, {{RSEH_MASK, RSEL_MASK}}, IZN, {RX_R1, RS_R3, RS_D2, RS_B2} },
+{ "rll",    6, {{RSEH(0xeb,0,0,0,0), RSEL(0x1d)}}, {{RSEH_MASK, RSEL_MASK}}, IN3, {RX_R1, RS_R3, RS_D2, RS_B2} },
+{ "rllg",   6, {{RSEH(0xeb,0,0,0,0), RSEL(0x1c)}}, {{RSEH_MASK, RSEL_MASK}}, IZN, {RX_R1, RS_R3, RS_D2, RS_B2} },
+{ "slag",   6, {{RSEH(0xeb,0,0,0,0), RSEL(0x0b)}}, {{RSEH_MASK, RSEL_MASK}}, IZN, {RX_R1, RS_R3, RS_D2, RS_B2} },
+{ "sllg",   6, {{RSEH(0xeb,0,0,0,0), RSEL(0x0d)}}, {{RSEH_MASK, RSEL_MASK}}, IZN, {RX_R1, RS_R3, RS_D2, RS_B2} },
+{ "srag",   6, {{RSEH(0xeb,0,0,0,0), RSEL(0x0a)}}, {{RSEH_MASK, RSEL_MASK}}, IZN, {RX_R1, RS_R3, RS_D2, RS_B2} },
+{ "srlg",   6, {{RSEH(0xeb,0,0,0,0), RSEL(0x0c)}}, {{RSEH_MASK, RSEL_MASK}}, IZN, {RX_R1, RS_R3, RS_D2, RS_B2} },
+{ "stcmh",  6, {{RSEH(0xeb,0,0,0,0), RSEL(0x2c)}}, {{RSEH_MASK, RSEL_MASK}}, IZN, {RX_R1, RS_R3, RS_D2, RS_B2} },
+{ "stctg",  6, {{RSEH(0xeb,0,0,0,0), RSEL(0x25)}}, {{RSEH_MASK, RSEL_MASK}}, IZN, {RX_R1, RS_R3, RS_D2, RS_B2} },
+{ "stmg",   6, {{RSEH(0xeb,0,0,0,0), RSEL(0x24)}}, {{RSEH_MASK, RSEL_MASK}}, IZN, {RX_R1, RS_R3, RS_D2, RS_B2} },
+{ "stmh",   6, {{RSEH(0xeb,0,0,0,0), RSEL(0x26)}}, {{RSEH_MASK, RSEL_MASK}}, IZN, {RX_R1, RS_R3, RS_D2, RS_B2} },
+{ "tracg",  6, {{RSEH(0xeb,0,0,0,0), RSEL(0x0f)}}, {{RSEH_MASK, RSEL_MASK}}, IZN, {RX_R1, RS_R3, RS_D2, RS_B2} },
 
 /* SI form instructions */
 { "cli",    4, {{SI(0x95,0,0,0),   0}}, {{SI_MASK,  0}}, I370, {SI_D1, SI_B1, SI_I2} },
