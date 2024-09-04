@@ -50,12 +50,17 @@ static long extract_rxf_r3 PARAMS (( i370_insn_t, int *));
    The fields are bits, shift, insert, extract, flags, name.
    The types:
    I370_OPERAND_GPR register, must name a register, must be present
-   I370_OPERAND_RELATIVE displacement or legnth field, must be present
+   I370_OPERAND_RELATIVE displacement or length field, must be present
    I370_OPERAND_BASE base register; if present, must name a register
                       if absent, should take value of zero
    I370_OPERAND_INDEX index register; if present, must name a register
                       if absent, should take value of zero
    I370_OPERAND_OPTIONAL other optional operand (usuall reg?)
+
+   Many of the operands describe the same field, such as RX_R1, RI_R1,
+   RIL_R1, RXE_R1, RS_R1, RSI_R1, but are given distinct definitions
+   and distinct names as an aid to debugging and readability of the
+   opcode table.
 */
 
 const struct i370_operand i370_operands[] =
@@ -183,7 +188,7 @@ const struct i370_operand i370_operands[] =
 
   /* The I2 immediate field in an RIL form instruction.  */
 #define RIL_I2 (RIL_R1 + 1)
-  { 0, 0, insert_ril_i2, extract_ril_i2, I370_OPERAND_RELATIVE, "RIL I2" },
+  { 16, 0, insert_ril_i2, extract_ril_i2, I370_OPERAND_RELATIVE, "RIL I2" },
 
  /* The I2 index field in an SI form instruction.  */
 #define SI_I2 (RIL_I2 + 1)
@@ -431,16 +436,30 @@ extract_rxf_r3 (insn, invalid)
 
 #define RI_MASK RI (0xfff, 0x0, 0x0)
 
-/* An RIL form instruction.  */
+/* An RIL form instruction high word.  */
 #define RILH(op, r1, i2) \
   (ROPS(op) | ((((unsigned short) (r1)) & 0xf) << 20) |  \
               ((((unsigned int) (i2)) & 0xffff0000) >> 16))
 
+#define RILH_MASK RILH (0xfff, 0x0, 0x0)
+
+/* An RIL form instruction low word.  */
 #define RILL(i2) \
               ((((unsigned long) (i2)) & 0xffff) << 16))
 
-#define RILH_MASK RILH (0xfff, 0x0, 0x0)
-#define RILL_MASK RILL (0x0)
+/* An RIE form instruction high word.  */
+#define RIEH(op, r1, r3, i2) \
+  (XOPS(op) | ((((unsigned short) (r1)) & 0xf) << 20) |  \
+              ((((unsigned short) (r3)) & 0xf) << 16) |  \
+              ((((unsigned short) (i2)) & 0xffff)))
+
+#define RIEH_MASK RIEH (0xff, 0, 0, 0)
+
+/* An RIE form instruction low word.  */
+#define RIEL(op) \
+              ((((unsigned short) (op)) & 0xff) << 16 )
+
+#define RIEL_MASK RIEL (0xff)
 
 /* An SI form instruction.  */
 #define SI(op, i2, b1, d1) \
@@ -1003,6 +1022,10 @@ const struct i370_opcode i370_opcodes[] = {
 { "larl",   6, {{RILH(0xc00,0,0),  0}}, {{RILH_MASK, 0}}, IN3,  {RIL_R1, RIL_I2} },
 { "brcl",   6, {{RILH(0xc04,0,0),  0}}, {{RILH_MASK, 0}}, IN3,  {RIL_R1, RIL_I2} },
 { "brasl",  6, {{RILH(0xc05,0,0),  0}}, {{RILH_MASK, 0}}, IN3,  {RIL_R1, RIL_I2} },
+
+/* RIE form instructions.  */
+{ "brxhg",  6, {{RIEH(0xec,0,0,0), RIEL(0x44)}}, {{RIEH_MASK, RIEL_MASK}}, IZN, {RSI_R1, RSI_R3, RSI_I2} },
+{ "brxlg",  6, {{RIEH(0xec,0,0,0), RIEL(0x45)}}, {{RIEH_MASK, RIEL_MASK}}, IZN, {RSI_R1, RSI_R3, RSI_I2} },
 
 /* SI form instructions */
 { "cli",    4, {{SI(0x95,0,0,0),   0}}, {{SI_MASK,  0}}, I370, {SI_D1, SI_B1, SI_I2} },
