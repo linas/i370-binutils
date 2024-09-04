@@ -61,6 +61,15 @@ insert_rxf_r3 (i370_insn_t insn, long value,
   return insn;
 }
 
+static i370_insn_t
+insert_ril_i2 (i370_insn_t insn, long value,
+	       const char **errmsg ATTRIBUTE_UNUSED)
+{
+  insn.i[0] |= (value & 0xffff0000) >> 16;
+  insn.i[1] |= (value & 0xffff) << 16;
+  return insn;
+}
+
 static long
 extract_ss_b2 (i370_insn_t insn, int *invalid ATTRIBUTE_UNUSED)
 {
@@ -77,6 +86,12 @@ static long
 extract_rxf_r3 (i370_insn_t insn, int *invalid ATTRIBUTE_UNUSED)
 {
   return (insn.i[1] >>28) & 0xf;
+}
+
+static long
+extract_ril_i2 (i370_insn_t insn, int *invalid ATTRIBUTE_UNUSED)
+{
+  return ((insn.i[0] & 0xffff) << 16) | ((insn.i[1] >> 16) & 0xffff);
 }
 
 /* The operands table.
@@ -208,8 +223,17 @@ const struct i370_operand i370_operands[] =
 #define RI_I2_MASK (0xffff)
   { 16, 0, 0, 0, I370_OPERAND_RELATIVE, "RI I2" },
 
+  /* The R1 register field in an RIL form instruction.  */
+#define RIL_R1 (RI_I2 + 1)
+#define RIL_R1_MASK (0xf << 20)
+  { 4, 20, 0, 0, I370_OPERAND_GPR, "RIL R1" },
+
+  /* The I2 immediate field in an RIL form instruction.  */
+#define RIL_I2 (RIL_R1 + 1)
+  { 0, 0, insert_ril_i2, extract_ril_i2, I370_OPERAND_RELATIVE, "RIL I2" },
+
  /* The I2 index field in an SI form instruction.  */
-#define SI_I2 (RI_I2 + 1)
+#define SI_I2 (RIL_I2 + 1)
 #define SI_I2_MASK (0xff << 16)
   { 8, 16, 0, 0, I370_OPERAND_RELATIVE, "SI I2"},
 
@@ -380,6 +404,17 @@ const struct i370_operand i370_operands[] =
               ((((unsigned short) (i2)) & 0xffff)))
 
 #define RI_MASK RI (0xfff, 0x0, 0x0)
+
+/* An RIL form instruction.  */
+#define RILH(op, r1, i2) \
+  (ROPS(op) | ((((unsigned short) (r1)) & 0xf) << 20) |  \
+              ((((unsigned int) (i2)) & 0xffff0000) >> 16))
+
+#define RILL(i2) \
+              ((((unsigned long) (i2)) & 0xffff) << 16))
+
+#define RILH_MASK RILH (0xfff, 0x0, 0x0)
+#define RILL_MASK RILL (0x0)
 
 /* An SI form instruction.  */
 #define SI(op, i2, b1, d1) \
@@ -936,6 +971,11 @@ const struct i370_opcode i370_opcodes[] =
 { "tmhh",   4, {{RI(0xa72,0,0),    0}}, {{RI_MASK,  0}}, IZN,  {RI_R1, RI_I2} },
 { "tmhl",   4, {{RI(0xa73,0,0),    0}}, {{RI_MASK,  0}}, IZN,  {RI_R1, RI_I2} },
 { "tml",    4, {{RI(0xa71,0,0),    0}}, {{RI_MASK,  0}}, IIR,  {RI_R1, RI_I2} },
+
+/* RIL form instructions.  */
+{ "larl",   6, {{RILH(0xc00,0,0),  0}}, {{RILH_MASK, 0}}, IN3,  {RIL_R1, RIL_I2} },
+{ "brcl",   6, {{RILH(0xc04,0,0),  0}}, {{RILH_MASK, 0}}, IN3,  {RIL_R1, RIL_I2} },
+{ "brasl",  6, {{RILH(0xc05,0,0),  0}}, {{RILH_MASK, 0}}, IN3,  {RIL_R1, RIL_I2} },
 
 /* SI form instructions.  */
 { "cli",    4, {{SI(0x95,0,0,0),   0}}, {{SI_MASK,  0}}, I370, {SI_D1, SI_B1, SI_I2} },
