@@ -96,6 +96,12 @@ cd ../i370-examples
 ```
 
 
+### Documentation
+The assembly instructions are documented in:
+[z/Architecture Principles of Operation, Fourteenth Edition (May,
+2022)](https://www.ibm.com/docs/en/module_1678991624569/pdf/SA22-7832-13.pdf)
+which is IBM document number SA22-7832-13.
+
 README for GNU development tools
 --------------------------------
 ```
