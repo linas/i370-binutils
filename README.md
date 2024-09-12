@@ -60,6 +60,10 @@ uses for PDOS. Version 2.30 is supported, because this is the last
 version of binutils that included i370 natively. Version 2.43 is
 supported, because this is the current version of binutils, as of 2024.
 
+The final call to `sudo make install` copies the binaries to
+`/usr/local/i370-ibm-linux/bin`. This step is needed, as the gcc
+compiler expects to find them there.
+
 #### Version 2.14
 The following should work:
 ```
@@ -67,6 +71,7 @@ git checkout i370-binutils-2_14
 mkdir build; cd build
 ../configure --target=i370-ibm-linux
 make -j
+sudo make install
 ```
 
 #### Version 2.30
@@ -76,6 +81,7 @@ git checkout i370-binutils-2_30
 mkdir build; cd build
 ../configure --target=i370-ibm-linux --enable-obsolete
 make -j
+sudo make install
 ```
 
 #### Version 2.43
@@ -85,6 +91,7 @@ git checkout master
 mkdir build; cd build
 ../configure --target=i370-ibm-linux
 make -j
+sudo make install
 ```
 
 
