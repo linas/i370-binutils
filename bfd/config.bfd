@@ -118,7 +118,6 @@ case $targ in
  *-adobe-* | \
  *-sony-* | \
  *-tandem-* | \
- i370-* | \
  sh5*-*-* | sh64*-*-* | \
  null)
     if test "x$enable_obsolete" != xyes; then
