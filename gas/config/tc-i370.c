@@ -889,6 +889,22 @@ i370_csect (int unused ATTRIBUTE_UNUSED)
   as_tsktsk ("csect not supported");
 }
 
+/* Support for externals.
+   For example,
+       ENTRY @@CRT0
+   should be translated to
+       ENTRY __crt0
+   Note the "@" is translated to "_" and the rest of the external
+   identifier is translated to lowercase.
+   This is same as the elf `.globl __crt0`
+*/
+
+static void
+i370_entry (int unused ATTRIBUTE_UNUSED)
+{
+  as_tsktsk ("entry not supported");
+}
+
 
 static void
 i370_atof (int type, int subtype, char *litp, int *sizep)
@@ -1019,7 +1035,10 @@ i370_dc (int unused ATTRIBUTE_UNUSED)
 }
 
 
-/* Provide minimal support for DS Define Storage.  */
+/* Provide minimal support for DS Define Storage.
+   DS 0H should align on a half-word
+   DS 4000C should increment 4000 bytes (i.e. same as .space 4000)
+ */
 
 static void
 i370_ds (int unused ATTRIBUTE_UNUSED)
@@ -2797,18 +2816,20 @@ tc_gen_reloc (asection *seg ATTRIBUTE_UNUSED, fixS *fixp)
   return reloc;
 }
 
-/* The target specific pseudo-ops which we support.  */
+/* The target-specific pseudo-ops which we support.  */
 
 const pseudo_typeS md_pseudo_table[] =
 {
   /* Pseudo-ops which must be overridden.  */
   { "byte",     i370_byte,	0 },
 
+  /* HLASM-style pseudo-ops */
   { "dc",       i370_dc,	0 },
   { "ds",       i370_ds,	0 },
   { "rmode",    i370_rmode,	0 },
   { "csect",    i370_csect,	0 },
   { "dsect",    i370_dsect,	0 },
+  { "entry",    i370_entry,	0 },
 
   /* enable ebcdic strings e.g. for 3270 support */
   { "ebcdic",   i370_ebcdic,	0 },
@@ -2825,10 +2846,10 @@ const pseudo_typeS md_pseudo_table[] =
   /* This pseudo-op is used even when not generating XCOFF output.  */
   { "tc",       i370_tc,	0 },
 
-  /* dump the literal pool */
+  /* Dump the literal pool */
   { "ltorg",    i370_ltorg,	0 },
 
-  /* support the hlasm-style USING directive */
+  /* Support the HLASM-style USING directive. */
   { "using",    i370_using,	0 },
   { "drop",     i370_drop,	0 },
 
