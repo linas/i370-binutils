@@ -58,41 +58,33 @@ There are three supported versions in this repo: 2.14, 2.30 and 2.43.
 Version 2.14 is supported, because this is the version that Paul Edwards
 uses for PDOS. Version 2.30 is supported, because this is the last
 version of binutils that included i370 natively. Version 2.43 is
-supported, because this is the current version of binutils, as of 2024.
+supported, because this is the current version of binutils, as of
+September 2024.
+
+Pick one of these, by saying:
+```
+git checkout i370-binutils-2_14
+```
+or
+```
+git checkout i370-binutils-2_30
+```
+or, for the currrent Version 2.43:
+```
+git checkout master
+```
+
+Then build and install:
+```
+mkdir build; cd build
+../configure --target=i370-ibm-linux
+make -j
+sudo make install
+```
 
 The final call to `sudo make install` copies the binaries to
 `/usr/local/i370-ibm-linux/bin`. This step is needed, as the gcc
 compiler expects to find them there.
-
-#### Version 2.14
-The following should work:
-```
-git checkout i370-binutils-2_14
-mkdir build; cd build
-../configure --target=i370-ibm-linux
-make -j
-sudo make install
-```
-
-#### Version 2.30
-The following should work:
-```
-git checkout i370-binutils-2_30
-mkdir build; cd build
-../configure --target=i370-ibm-linux --enable-obsolete
-make -j
-sudo make install
-```
-
-#### Version 2.43
-The following should work:
-```
-git checkout master
-mkdir build; cd build
-../configure --target=i370-ibm-linux
-make -j
-sudo make install
-```
 
 
 #### Examples
@@ -114,7 +106,7 @@ README for GNU development tools
 ```
 		   README for GNU development tools
 
-This directory contains various GNU compilers, assemblers, linkers, 
+This directory contains various GNU compilers, assemblers, linkers,
 debuggers, etc., plus their support routines, definitions, and documentation.
 
 If you are receiving this as part of a GDB release, see the file gdb/README.
@@ -126,7 +118,7 @@ It is now possible to automatically configure and build a variety of
 tools with one command.  To build all of the tools contained herein,
 run the ``configure'' script here, e.g.:
 
-	./configure 
+	./configure
 	make
 
 To install them (by default in /usr/local/bin, /usr/local/lib, etc),
