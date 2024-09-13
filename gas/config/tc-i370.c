@@ -992,20 +992,43 @@ i370_csect (unused)
   as_tsktsk ("csect not supported");
 }
 
-/* Support for externals.
+
+/* Provide minimal support for externals.
+
    For example,
        ENTRY @@CRT0
    should be translated to
        ENTRY __crt0
    Note the "@" is translated to "_" and the rest of the external
    identifier is translated to lowercase.
+
    This is same as the elf `.globl __crt0`
+   See the function s_globl() in read.c for a fancy example.
 */
 
 static void
 i370_entry (int unused ATTRIBUTE_UNUSED)
 {
-  as_tsktsk ("entry not supported");
+  char *name;
+  symbolS *symbolP;
+  size_t i;
+
+  if ((name = read_symbol_name ()) == NULL)
+    return;
+
+  if ('@' == name[0])
+    {
+      name[0] = '_';
+      if ('@' == name[1]) name[1] = '_';
+    }
+
+  for (i=0; i< strlen(name); i++)
+    name[i] = TOLOWER(name[i]);
+
+  symbolP = symbol_find_or_make (name);
+  S_SET_EXTERNAL (symbolP);
+  free (name);
+  demand_empty_rest_of_line ();
 }
 
 
@@ -1179,6 +1202,10 @@ i370_ds (unused)
     {
       as_bad ("this DS form not yet supported");
     }
+
+  /* See the function s_space() in read.c for examples on how to
+     handle other section types (absolute, common, etc.) and how
+     to parse more complex expressions */
 }
 
 /* Solaris pseudo op to change to the .rodata section.  */
