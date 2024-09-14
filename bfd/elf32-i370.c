@@ -474,7 +474,9 @@ i370_elf_late_size_sections (bfd *output_bfd,
 {
   bfd *dynobj;
   asection *s;
-  bool relocs;
+  bool plt = false;
+  bool relocs = false;
+  bool reltext = false;
   bfd *ibfd;
 
   dynobj = elf_hash_table (info)->dynobj;
@@ -490,6 +492,25 @@ i370_elf_late_size_sections (bfd *output_bfd,
 	  BFD_ASSERT (s != NULL);
 	  s->size = sizeof ELF_DYNAMIC_INTERPRETER;
 	  s->contents = (unsigned char *) ELF_DYNAMIC_INTERPRETER;
+	}
+    }
+  else
+    {
+      /* We may have created entries in the .rela.got, .rela.sdata, and
+	 .rela.sdata2 sections.  However, if we are not creating the
+	 dynamic sections, we will not actually use these entries.  Reset
+	 the size of .rela.got, et al, which will cause it to get
+	 stripped from the output file below.  */
+      static char *rela_sections[] = { ".rela.got", ".rela.sdata",
+				       ".rela.sdata2", ".rela.sbss",
+				       NULL };
+      char **p;
+
+      for (p = rela_sections; *p != NULL; p++)
+	{
+	  s = bfd_get_linker_section (dynobj, *p);
+	  if (s != NULL)
+	    s->size = 0;
 	}
     }
 
@@ -531,7 +552,6 @@ i370_elf_late_size_sections (bfd *output_bfd,
   /* The check_relocs and adjust_dynamic_symbol entry points have
      determined the sizes of the various dynamic sections.  Allocate
      memory for them.  */
-  relocs = false;
   for (s = dynobj->sections; s != NULL; s = s->next)
     {
       const char *name;
@@ -543,19 +563,40 @@ i370_elf_late_size_sections (bfd *output_bfd,
 	 of the dynobj section names depend upon the input files.  */
       name = bfd_section_name (s);
 
-      if (startswith (name, ".rela"))
+      if (strcmp (name, ".plt") == 0)
+	{
+	  /* Remember whether there is a PLT.  */
+	  plt = s->size != 0;
+	}
+      else if (startswith (name, ".rela"))
 	{
 	  if (s->size != 0)
 	    {
+	      asection *target;
+	      const char *outname;
+
+	      /* Remember whether there are any relocation sections.  */
 	      relocs = true;
+
+	      /* If this relocation section applies to a read only
+		 section, then we probably need a DT_TEXTREL entry.  */
+	      outname = bfd_section_name (s->output_section);
+	      target = bfd_get_section_by_name (output_bfd, outname + 5);
+	      if (target != NULL
+		  && (target->flags & SEC_READONLY) != 0
+		  && (target->flags & SEC_ALLOC) != 0)
+		reltext = true;
 
 	      /* We use the reloc_count field as a counter if we need
 		 to copy relocs into the output file.  */
 	      s->reloc_count = 0;
 	    }
 	}
-      else if ((strcmp (name, ".dynbss") != 0) &&
-		(strcmp (name, ".dynsbss") != 0))
+      else if (strcmp (name, ".got") != 0
+	       && strcmp (name, ".sdata") != 0
+	       && strcmp (name, ".sdata2") != 0
+	       && strcmp (name, ".dynbss") != 0
+	       && strcmp (name, ".dynsbss") != 0)
 	{
 	  /* It's not one of our sections, so don't allocate space.  */
 	  continue;
@@ -585,7 +626,12 @@ i370_elf_late_size_sections (bfd *output_bfd,
 	return false;
     }
 
-  return _bfd_elf_add_dynamic_tags (output_bfd, info, relocs);
+  /* Add some entries to the .dynamic section.  We fill in the
+     values later, in i370_elf_finish_dynamic_sections, but we
+     must add the entries now so that we get the correct size for
+     the .dynamic section.  The DT_DEBUG entry is filled in by the
+     dynamic linker and used by the debugger.  */
+  return _bfd_elf_add_dynamic_tags (output_bfd, info, relocs|plt|reltext);
 }
 
 
@@ -775,6 +821,7 @@ i370_elf_check_relocs (bfd *abfd,
       if (bfd_link_pic (info))
 	{
 #ifdef DEBUG
+	  /* if (h && h->root.root.string) */
 	  fprintf (stderr,
 		   "i370_elf_check_relocs needs to create relocation for %s\n",
 		   (h && h->root.root.string)
@@ -912,10 +959,12 @@ i370_elf_finish_dynamic_sections (bfd *output_bfd,
 
 	  indx = elf_section_data (s)->this_idx;
 	  dindx = elf_section_data (s)->dynindx;
-	  if (dindx != -1)
+	  // dindx is -1 if there are no dynamic symbols.
+	  // dindx is 0 if there are symbols in debugging sections,
+	  // but those are being stripped.
+	  if (dindx > 0)
 	    {
 	      BFD_ASSERT(indx > 0);
-	      BFD_ASSERT(dindx > 0);
 
 	      if (dindx > maxdindx)
 		maxdindx = dindx;
@@ -1140,6 +1189,22 @@ i370_elf_relocate_section (bfd *output_bfd,
 		{
 		  sreloc = _bfd_elf_get_dynamic_reloc_section
 		    (input_bfd, input_section, /*rela?*/ true);
+
+		  /* Hack around a confusing situation. Some bug
+		    somewhere. We are called with relocations in
+		    .rela.debug_info but there's nowhere to put them
+		    because sreloc wasn't created and because there's
+		    no sreloc->contents for it. I think this is because
+		    there are literals in the debug sections, but
+		    i370_elf_check_relocs() was never called for those.
+		    Either this is he right behavior, or we have to call
+		    i370_elf_check_relocs() on stripped debug sections,
+		    anyway. I dunno. grep for strip_debugger in
+		    _bfd_elf_link_iterate_on_relocs() */
+		  if (sreloc == NULL
+		      && (input_section->flags & SEC_DEBUGGING))
+		    continue;
+
 		  if (sreloc == NULL)
 		    return false;
 #ifdef DEBUG
