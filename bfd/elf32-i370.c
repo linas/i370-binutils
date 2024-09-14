@@ -413,6 +413,182 @@ i370_elf_fake_sections (bfd *abfd ATTRIBUTE_UNUSED,
   return true;
 }
 
+/* Allocate space in .plt, .got and associated reloc sections for
+   dynamic relocs.  */
+
+static bool
+allocate_dynrelocs (struct elf_link_hash_entry *h, void * inf)
+{
+  struct bfd_link_info *info;
+  struct elf_link_hash_table *htab;
+  struct elf_dyn_relocs *p;
+
+  if (h->root.type == bfd_link_hash_indirect)
+    return true;
+
+  info = (struct bfd_link_info *) inf;
+  htab = elf_hash_table (info);
+  if (htab == NULL)
+    return false;
+
+  if (htab->dynamic_sections_created
+      && h->plt.refcount > 0)
+    {
+// Needs to be implemented
+abort();
+    }
+  else
+    {
+      h->plt.offset = (bfd_vma) -1;
+      h->needs_plt = 0;
+    }
+
+  if (h->got.refcount > 0)
+    {
+// Needs to be implemented
+abort();
+    }
+  else
+    h->got.offset = (bfd_vma) -1;
+
+  /* Finally, allocate space.  */
+  for (p = h->dyn_relocs; p != NULL; p = p->next)
+    {
+      asection *sreloc = elf_section_data (p->sec)->sreloc;
+      sreloc->size += p->count * sizeof (Elf32_External_Rela);
+    }
+
+  return true;
+}
+
+
+#define is_i370_elf(bfd) \
+  (bfd_get_flavour (bfd) == bfd_target_elf_flavour)
+
+/* Set the sizes of the dynamic sections.
+   Copied from elf_m68k_late_size_sections.  */
+
+static bool
+i370_elf_late_size_sections (bfd *output_bfd,
+			     struct bfd_link_info *info)
+{
+  bfd *dynobj;
+  asection *s;
+  bool relocs;
+  bfd *ibfd;
+
+  dynobj = elf_hash_table (info)->dynobj;
+  if (dynobj == NULL)
+    return true;
+
+  if (elf_hash_table (info)->dynamic_sections_created)
+    {
+      /* Set the contents of the .interp section to the interpreter.  */
+      if (bfd_link_executable (info) && !info->nointerp)
+	{
+	  s = bfd_get_linker_section (dynobj, ".interp");
+	  BFD_ASSERT (s != NULL);
+	  s->size = sizeof ELF_DYNAMIC_INTERPRETER;
+	  s->contents = (unsigned char *) ELF_DYNAMIC_INTERPRETER;
+	}
+    }
+
+  /* Set up space for local dynamic relocs. */
+  for (ibfd = info->input_bfds; ibfd != NULL; ibfd = ibfd->link.next)
+    {
+      bfd_signed_vma *local_got;
+      asection *srel;
+
+      for (s = ibfd->sections; s != NULL; s = s->next)
+	{
+	  struct elf_dyn_relocs *p;
+
+	  if (!is_i370_elf (ibfd))
+	    continue;
+
+	  for (p = ((struct elf_dyn_relocs *)
+		   elf_section_data (s)->local_dynrel);
+	       p != NULL; p = p->next)
+	    {
+	      if (p->count != 0)
+		{
+		  srel = elf_section_data (p->sec)->sreloc;
+		  srel->size += p->count * sizeof (Elf32_External_Rela);
+		  if ((p->sec->output_section->flags & SEC_READONLY) != 0)
+		    info->flags |= DF_TEXTREL;
+		}
+	    }
+	}
+
+      // Needs to be implemented
+      local_got = elf_local_got_refcounts (ibfd);
+      if (local_got) abort();
+    }
+
+  /* Allocate space for global sym dynamic relocs. */
+  elf_link_hash_traverse (elf_hash_table (info), allocate_dynrelocs, info);
+
+  /* The check_relocs and adjust_dynamic_symbol entry points have
+     determined the sizes of the various dynamic sections.  Allocate
+     memory for them.  */
+  relocs = false;
+  for (s = dynobj->sections; s != NULL; s = s->next)
+    {
+      const char *name;
+
+      if ((s->flags & SEC_LINKER_CREATED) == 0)
+	continue;
+
+      /* It's OK to base decisions on the section name, because none
+	 of the dynobj section names depend upon the input files.  */
+      name = bfd_section_name (s);
+
+      if (startswith (name, ".rela"))
+	{
+	  if (s->size != 0)
+	    {
+	      relocs = true;
+
+	      /* We use the reloc_count field as a counter if we need
+		 to copy relocs into the output file.  */
+	      s->reloc_count = 0;
+	    }
+	}
+      else if ((strcmp (name, ".dynbss") != 0) &&
+		(strcmp (name, ".dynsbss") != 0))
+	{
+	  /* It's not one of our sections, so don't allocate space.  */
+	  continue;
+	}
+
+      if (s->size == 0)
+	{
+	  /* If we don't need this section, strip it from the
+	     output file.  This is mostly to handle .rela.bss and
+	     .rela.plt.  We must create both sections in
+	     create_dynamic_sections, because they must be created
+	     before the linker maps input sections to output
+	     sections.  The linker does that before
+	     adjust_dynamic_symbol is called, and it is that
+	     function which decides whether anything needs to go
+	     into these sections.  */
+	  s->flags |= SEC_EXCLUDE;
+	  continue;
+	}
+
+      if ((s->flags & SEC_HAS_CONTENTS) == 0)
+	continue;
+
+      /* Allocate memory for the section contents.  */
+      s->contents = (bfd_byte *) bfd_zalloc (dynobj, s->size);
+      if (s->contents == NULL)
+	return false;
+    }
+
+  return _bfd_elf_add_dynamic_tags (output_bfd, info, relocs);
+}
+
+
 /* We have to create .dynsbss and .rela.sbss here so that they get mapped
    to output sections (just like _bfd_elf_create_dynamic_sections has
    to create .dynbss and .rela.bss).  */
@@ -423,12 +599,13 @@ i370_elf_fake_sections (bfd *abfd ATTRIBUTE_UNUSED,
 static bool
 i370_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
 {
-  asection *s;
-  flagword flags;
 
   if (!_bfd_elf_create_dynamic_sections(abfd, info))
     return false;
 
+#if SEEMS_NOT_TO_BE_NEEDED
+  asection *s;
+  flagword flags;
   flags = (SEC_ALLOC | SEC_LOAD | SEC_HAS_CONTENTS | SEC_IN_MEMORY
 	   | SEC_LINKER_CREATED);
 
@@ -441,17 +618,11 @@ i370_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
     {
       s = bfd_make_section_anyway_with_flags (abfd, ".rela.sbss",
 					      flags | SEC_READONLY);
-      if (s == NULL
-	  || ! bfd_set_section_alignment (s, 2))
+      if (s == NULL || ! bfd_set_section_alignment (s, 2))
 	return false;
     }
+#endif
 
-   /* XXX beats me, seem to need a rela.text ...  */
-   s = bfd_make_section_anyway_with_flags (abfd, ".rela.text",
-					   flags | SEC_READONLY);
-   if (s == NULL
-      || ! bfd_set_section_alignment (s, 2))
-    return false;
   return true;
 }
 
@@ -574,7 +745,7 @@ i370_elf_check_relocs (bfd *abfd,
     return true;
 
 #ifdef DEBUG
-  _bfd_error_handler ("i370_elf_check_relocs called for section %A in %pB",
+  _bfd_error_handler ("i370_elf_check_relocs called for section %pA in %pB",
 		      sec, abfd);
 #endif
 
@@ -812,7 +983,7 @@ i370_elf_relocate_section (bfd *output_bfd,
   bool ret = true;
 
 #ifdef DEBUG
-  _bfd_error_handler ("i370_elf_relocate_section called for %pB section %A, %u relocations%s",
+  _bfd_error_handler ("i370_elf_relocate_section called for %pB section %pA, %u relocations%s",
 		      input_bfd, input_section,
 		      input_section->reloc_count,
 		      (bfd_link_relocatable (info)) ? " (relocatable)" : "");
@@ -957,7 +1128,7 @@ i370_elf_relocate_section (bfd *output_bfd,
 
 #ifdef DEBUG
 	      fprintf (stderr,
-		       "i370_elf_relocate_section needs to create relocation for %s\n",
+		       "i370_elf_relocate_section needs to create PIC relocation for %s\n",
 		       (h && h->root.root.string) ? h->root.root.string : "<unknown>");
 #endif
 
@@ -971,6 +1142,14 @@ i370_elf_relocate_section (bfd *output_bfd,
 		    (input_bfd, input_section, /*rela?*/ true);
 		  if (sreloc == NULL)
 		    return false;
+#ifdef DEBUG
+		  _bfd_error_handler ("Work with dynamic section %pA", sreloc);
+#endif
+		  if (sreloc->contents == NULL)
+		    {
+		      bfd_set_error (bfd_error_no_contents);
+		      return false;
+		    }
 		}
 
 	      skip = 0;
@@ -1161,7 +1340,7 @@ i370_elf_finish_dynamic_symbol(bfd *,
 #define elf_backend_rela_normal    1
 
 #define bfd_elf32_bfd_reloc_type_lookup		i370_elf_reloc_type_lookup
-#define bfd_elf32_bfd_reloc_name_lookup	i370_elf_reloc_name_lookup
+#define bfd_elf32_bfd_reloc_name_lookup		i370_elf_reloc_name_lookup
 #define bfd_elf32_bfd_set_private_flags		i370_elf_set_private_flags
 #define bfd_elf32_bfd_merge_private_bfd_data	i370_elf_merge_private_bfd_data
 #define elf_backend_relocate_section		i370_elf_relocate_section
@@ -1172,6 +1351,7 @@ i370_elf_finish_dynamic_symbol(bfd *,
 #define elf_backend_init_index_section		_bfd_elf_init_1_index_section
 #define elf_backend_finish_dynamic_sections	i370_elf_finish_dynamic_sections
 #define elf_backend_fake_sections		i370_elf_fake_sections
+#define elf_backend_late_size_sections		i370_elf_late_size_sections
 #define elf_backend_section_from_shdr		i370_elf_section_from_shdr
 #define elf_backend_adjust_dynamic_symbol	i370_elf_adjust_dynamic_symbol
 #define elf_backend_check_relocs		i370_elf_check_relocs
