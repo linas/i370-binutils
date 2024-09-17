@@ -43,13 +43,15 @@ extern char *read_symbol_name (void); /* Instead of #include "read.h" */
 /* Tell the main code what the endianness is.  */
 extern int target_big_endian;
 
-/* Size ot literal pool/ltorg to print; #include "gas/listing.h" */
+/* Size of the literal pool/ltorg to print; #include "gas/listing.h" */
 extern int listing_lhs_cont_lines;
+
+bfd_boolean i370_no_pseudo_dot = FALSE;
+bfd_boolean i370_labels_without_colons = FALSE;
 
 
 /* Generic assembler global variables which must be defined by all
    targets.  */
-bfd_boolean i370_no_pseudo_dot = FALSE;
 
 #ifdef OBJ_ELF
 /* This string holds the chars that always start a comment.  If the
@@ -393,6 +395,7 @@ md_parse_option (int c, const char *arg)
 	{
 	  reg_names_p = FALSE;
 	  i370_no_pseudo_dot = TRUE;
+	  i370_labels_without_colons = TRUE;
 	}
 
       /* -m360 means to assemble for the ancient 360 architecture.  */

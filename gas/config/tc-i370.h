@@ -42,6 +42,10 @@ extern int target_big_endian;
 extern bfd_boolean i370_no_pseudo_dot;
 #define NO_PSEUDO_DOT i370_no_pseudo_dot
 
+/* Labels withoout a trailing colon. */
+extern bfd_boolean i370_labels_without_colons;
+#define LABELS_WITHOUT_COLONS i370_labels_without_colons
+
 /* Permit temporary numeric labels.  */
 #define LOCAL_LABELS_FB 1
 
