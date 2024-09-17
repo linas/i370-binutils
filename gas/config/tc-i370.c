@@ -975,9 +975,11 @@ i370_rmode (unused)
   as_tsktsk ("rmode ignored");
 }
 
+/* DSECT Data Section is (more or less) the same thing an
+   ELF .data section.  */
+
 static void
-i370_dsect (sect)
-     int sect;
+i370_dsect (int sect)
 {
   char *save_line = input_line_pointer;
   static char section[] = ".data\n";
@@ -989,11 +991,20 @@ i370_dsect (sect)
   input_line_pointer = save_line;
 }
 
+/* CSECT Code Section is (more or less) the same thing an
+   ELF .text section.  */
+
 static void
-i370_csect (unused)
-     int unused ATTRIBUTE_UNUSED;
+i370_csect (int sect)
 {
-  as_tsktsk ("csect not supported");
+  char *save_line = input_line_pointer;
+  static char section[] = ".text\n";
+
+  /* Just pretend this is .section .text.  */
+  input_line_pointer = section;
+  obj_elf_section (sect);
+
+  input_line_pointer = save_line;
 }
 
 
