@@ -21,14 +21,12 @@
    Software Foundation, 59 Temple Place - Suite 330, Boston, MA
    02111-1307, USA.  */
 
-/* This assembler implements a very hacked version of an elf-like thing
- * that gcc emits (when gcc is suitably hacked).  To make it behave more
- * HLASM-like, try turning on the -M or --mri flag (as there are various
- * similarities between HLASM and the MRI assemblers, such as section
- * names, lack of leading . in pseudo-ops, DC and DS, etc ...
+/* This assembler implements the mashup of ELF and HLASM emited by the
+ * gcc i370 compiler. The main difference between HLASM and ELF is that
+ * ELF uses a dot in from of the pseudo-ops, while HLASM does not. The
+ * -mhlasm flag is uses to control this.
  */
 
-#include <stdio.h>
 #include "as.h"
 #include "safe-ctype.h"
 #include "subsegs.h"
@@ -51,6 +49,7 @@ extern int listing_lhs_cont_lines;
 
 /* Generic assembler global variables which must be defined by all
    targets.  */
+bfd_boolean i370_no_pseudo_dot = FALSE;
 
 #ifdef OBJ_ELF
 /* This string holds the chars that always start a comment.  If the
@@ -85,9 +84,10 @@ md_show_usage (stream)
 {
   fprintf (stream, "\
 S/370 options: (these have not yet been tested and may not work) \n\
--u        		ignored\n\
--mregnames        	Allow symbolic names for registers\n\
--mno-regnames        	Do not allow symbolic names for registers\n");
+-mhlasm         	Operate in HLASM-compatible mode\n\
+-mregnames      	Allow symbolic names for registers\n\
+-mno-regnames   	Do not allow symbolic names for registers\n\
+-u              	ignored\n");
 #ifdef OBJ_ELF
   fprintf (stream, "\
 -mrelocatable        	support for GCC's -mrelocatble option\n\
@@ -472,9 +472,15 @@ md_parse_option (c, arg)
 #endif
 
     case 'm':
+      /* -mhlasm means means HLASM compatibility mode.  */
+      if (strcmp (arg, "hlasm") == 0)
+	{
+	  reg_names_p = FALSE;
+	  i370_no_pseudo_dot = TRUE;
+	}
 
-      /* -m360 mean to assemble for the ancient 360 architecture */
-      if (strcmp (arg, "360") == 0 || strcmp (arg, "i360") == 0)
+      /* -m360 means to assemble for the ancient 360 architecture */
+      else if (strcmp (arg, "360") == 0 || strcmp (arg, "i360") == 0)
 	i370_cpu = I370_OPCODE_360;
       /* -mxa means to assemble for the IBM 370 XA  */
       else if (strcmp (arg, "xa") == 0)

@@ -45,10 +45,18 @@ extern int target_big_endian;
 /* The target BFD format.  */
 #define TARGET_FORMAT ("elf32-i370")
 
+/* Pseudo-ops do not begin with a dot. */
+extern bfd_boolean i370_no_pseudo_dot;
+#define NO_PSEUDO_DOT i370_no_pseudo_dot
+
 /* Permit temporary numeric labels.  */
 #define LOCAL_LABELS_FB 1
 
-/* $ is used to refer to the current location.  */
+/* Single quotes are used for literals,
+ * e.g. =E'3.14159' or =XL4'cacad0d0' */
+#define SINGLE_QUOTE_STRINGS
+
+/* $ is (not) used to refer to the current location.  */
 /* #define DOLLAR_DOT */
 
 #define DIFF_EXPR_OK		/* foo-. gets turned into PC relative relocs */
