@@ -1016,11 +1016,17 @@ static void
 i370_entry (int unused ATTRIBUTE_UNUSED)
 {
   char *name;
+  char *end;
   symbolS *symbolP;
   size_t i;
 
-  if ((name = read_symbol_name ()) == NULL)
+  name = ++input_line_pointer;
+  if (name == NULL)
     return;
+
+  /* Only up to whitespace */
+  end = strpbrk (input_line_pointer, " \t\n\r");
+  if (end) *end = 0;
 
   if ('@' == name[0])
     {
@@ -1033,17 +1039,12 @@ i370_entry (int unused ATTRIBUTE_UNUSED)
 
   symbolP = symbol_find_or_make (name);
   S_SET_EXTERNAL (symbolP);
-  free (name);
   demand_empty_rest_of_line ();
 }
 
 
 static void
-i370_atof (type, subtype, litp, sizep)
-     int type;
-     int subtype;
-     char *litp;
-     int *sizep;
+i370_atof (int type, int subtype, char *litp, int *sizep)
 {
   /* 360/370/390 have two three formats:
      H Hex, which is the old-style, 24-bit or 56-bit mantissa
@@ -2291,7 +2292,7 @@ md_assemble (str)
       /* If there are fewer operands in the line then are called
 	 for by the instruction, we want to skip the optional
 	 operand.  */
-      nwanted = strlen (opcode->operands);
+      nwanted = strlen ((const char *) opcode->operands);
       if (have_optional_index)
 	{
 	  if (opcount < nwanted)
@@ -2410,7 +2411,7 @@ md_assemble (str)
             }
           if (! register_name (&ex))
             {
-              as_bad ("expecting a register for operand %d",
+              as_bad ("expecting a register for operand %ld",
 		      opindex_ptr - opcode->operands + 1);
             }
         }
