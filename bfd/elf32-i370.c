@@ -40,7 +40,7 @@ static reloc_howto_type i370_elf_howto_raw[] =
   /* This reloc does nothing.  */
   HOWTO (R_I370_NONE,		/* type */
 	 0,			/* rightshift */
-	 3,			/* size (0 = byte, 1 = short, 2 = long) */
+	 0,			/* size (1 = byte, 2 = 16-bit, 4 = 32-bit) */
 	 0,			/* bitsize */
 	 false,			/* pc_relative */
 	 0,			/* bitpos */
@@ -55,7 +55,7 @@ static reloc_howto_type i370_elf_howto_raw[] =
   /* A standard 31 bit relocation.  */
   HOWTO (R_I370_ADDR31,		/* type */
 	 0,			/* rightshift */
-	 2,			/* size (0 = byte, 1 = short, 2 = long) */
+	 4,			/* size (1 = byte, 2 = 16-bit, 4 = 32-bit) */
 	 31,			/* bitsize */
 	 false,			/* pc_relative */
 	 0,			/* bitpos */
@@ -70,7 +70,7 @@ static reloc_howto_type i370_elf_howto_raw[] =
   /* A standard 32 bit relocation.  */
   HOWTO (R_I370_ADDR32,		/* type */
 	 0,			/* rightshift */
-	 2,			/* size (0 = byte, 1 = short, 2 = long) */
+	 4,			/* size (1 = byte, 2 = 16-bit, 4 = 32-bit) */
 	 32,			/* bitsize */
 	 false,			/* pc_relative */
 	 0,			/* bitpos */
@@ -85,7 +85,7 @@ static reloc_howto_type i370_elf_howto_raw[] =
   /* A standard 16 bit relocation.  */
   HOWTO (R_I370_ADDR16,		/* type */
 	 0,			/* rightshift */
-	 1,			/* size (0 = byte, 1 = short, 2 = long) */
+	 2,			/* size (1 = byte, 2 = 16-bit, 4 = 32-bit) */
 	 16,			/* bitsize */
 	 false,			/* pc_relative */
 	 0,			/* bitpos */
@@ -100,7 +100,7 @@ static reloc_howto_type i370_elf_howto_raw[] =
   /* 31-bit PC relative.  */
   HOWTO (R_I370_REL31,		/* type */
 	 0,			/* rightshift */
-	 2,			/* size (0 = byte, 1 = short, 2 = long) */
+	 4,			/* size (1 = byte, 2 = 16-bit, 4 = 32-bit) */
 	 31,			/* bitsize */
 	 true,			/* pc_relative */
 	 0,			/* bitpos */
@@ -115,7 +115,7 @@ static reloc_howto_type i370_elf_howto_raw[] =
   /* 32-bit PC relative.  */
   HOWTO (R_I370_REL32,		/* type */
 	 0,			/* rightshift */
-	 2,			/* size (0 = byte, 1 = short, 2 = long) */
+	 4,			/* size (1 = byte, 2 = 16-bit, 4 = 32-bit) */
 	 32,			/* bitsize */
 	 true,			/* pc_relative */
 	 0,			/* bitpos */
@@ -130,7 +130,7 @@ static reloc_howto_type i370_elf_howto_raw[] =
   /* A standard 12 bit relocation.  */
   HOWTO (R_I370_ADDR12,		/* type */
 	 0,			/* rightshift */
-	 1,			/* size (0 = byte, 1 = short, 2 = long) */
+	 2,			/* size (1 = byte, 2 = 16-bit, 4 = 32-bit) */
 	 12,			/* bitsize */
 	 false,			/* pc_relative */
 	 0,			/* bitpos */
@@ -145,7 +145,7 @@ static reloc_howto_type i370_elf_howto_raw[] =
   /* 12-bit PC relative.  */
   HOWTO (R_I370_REL12,		/* type */
 	 0,			/* rightshift */
-	 1,			/* size (0 = byte, 1 = short, 2 = long) */
+	 2,			/* size (1 = byte, 2 = 16-bit, 4 = 32-bit) */
 	 12,			/* bitsize */
 	 true,			/* pc_relative */
 	 0,			/* bitpos */
@@ -160,7 +160,7 @@ static reloc_howto_type i370_elf_howto_raw[] =
   /* A standard 8 bit relocation.  */
   HOWTO (R_I370_ADDR8,		/* type */
 	 0,			/* rightshift */
-	 0,			/* size (0 = byte, 1 = short, 2 = long) */
+	 1,			/* size (1 = byte, 2 = 16-bit, 4 = 32-bit) */
 	 8,			/* bitsize */
 	 false,			/* pc_relative */
 	 0,			/* bitpos */
@@ -175,7 +175,7 @@ static reloc_howto_type i370_elf_howto_raw[] =
   /* 8-bit PC relative.  */
   HOWTO (R_I370_REL8,		/* type */
 	 0,			/* rightshift */
-	 0,			/* size (0 = byte, 1 = short, 2 = long) */
+	 1,			/* size (1 = byte, 2 = 16-bit, 4 = 32-bit) */
 	 8,			/* bitsize */
 	 true,			/* pc_relative */
 	 0,			/* bitpos */
@@ -194,7 +194,7 @@ static reloc_howto_type i370_elf_howto_raw[] =
      run has to have the data at some particular address.  */
   HOWTO (R_I370_COPY,		/* type */
 	 0,			/* rightshift */
-	 2,			/* size (0 = byte, 1 = short, 2 = long) */
+	 4,			/* size (1 = byte, 2 = 16-bit, 4 = 32-bit) */
 	 32,			/* bitsize */
 	 false,			/* pc_relative */
 	 0,			/* bitpos */
@@ -211,7 +211,7 @@ static reloc_howto_type i370_elf_howto_raw[] =
      addend.  */
   HOWTO (R_I370_RELATIVE,	/* type */
 	 0,			/* rightshift */
-	 2,			/* size (0 = byte, 1 = short, 2 = long) */
+	 4,			/* size (1 = byte, 2 = 16-bit, 4 = 32-bit) */
 	 32,			/* bitsize */
 	 false,			/* pc_relative */
 	 0,			/* bitpos */
