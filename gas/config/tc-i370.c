@@ -316,17 +316,16 @@ reg_name_search (regs, regcount, name)
   return -1;
 }
 
-/*
- * Summary of register_name().
+/* register_name(): parse expression containing a register name.
  *
- * in:        Input_line_pointer points to 1st char of operand.
+ * in:  Input_line_pointer points to 1st char of operand.
  *
- * out:        An expressionS.
- *      The operand may have been a register: in this case, X_op == O_register,
- *      X_add_number is set to the register number, and truth is returned.
- *        Input_line_pointer->(next non-blank) char after operand, or is in its
- *      original state.
- */
+ * out: An expressionS.
+ *
+ * The operand may have been a register: in this case, X_op == O_register,
+ * X_add_number is set to the register number, and truth is returned.
+ * Input_line_pointer->(next non-blank) char after operand, or is in its
+ * original state.  */
 
 static bfd_boolean
 register_name (expressionP)
@@ -337,13 +336,12 @@ register_name (expressionP)
   char *start;
   char c;
 
-  /* Find the spelling of the operand.  */
+  /* Allow percent sign, so %r13 and %13 as register names.  */
   start = name = input_line_pointer;
   if (name[0] == '%' && ISALPHA (name[1]))
     name = ++input_line_pointer;
 
-  else if (!reg_names_p)
-    return FALSE;
+  /* else if (!reg_names_p) return FALSE; */
 
   while (' ' == *name)
     name = ++input_line_pointer;
@@ -1195,7 +1193,7 @@ i370_ds (unused)
 	  alignment = 2;
 	  break;
 	case 'D':  /* 64-bit */
-	case 'L':  /* 128-bit but 84-bit aligned */
+	case 'L':  /* 128-bit but 64-bit aligned */
 	  alignment = 3;
 	  break;
 	default:
@@ -1671,10 +1669,13 @@ i370_addr_offset (expressionS *exx)
   return TRUE;
 }
 
-/* Create IBM Floating Point Decimal */
+/* Create IBM Floating Point Decimal
+   TODO: Implement me!  */
 static void
-gen_to_decimal_words (LITTLENUM_TYPE *, int)
+gen_to_decimal_words (LITTLENUM_TYPE *words, int type ATTRIBUTE_UNUSED)
 {
+  memset(words, 0, BIGNUM_CACHE * sizeof(LITTLENUM_TYPE));
+
   as_bad ("IBM Decimal floats currently not supported");
 }
 
@@ -2090,6 +2091,7 @@ i370_using (ignore)
     as_bad (".using: base address expression illegal or too complex");
   }
 
+  /* Skip past the comma.  */
   if (*input_line_pointer != '\0') ++input_line_pointer;
 
   /* the second arg to using had better be a register */
@@ -2557,8 +2559,8 @@ md_assemble (str)
      md_apply_fix3.  */
   for (i = 0; i < fc; i++)
     {
-      // const struct i370_operand *operand;
-      // operand = &i370_operands[fixups[i].opindex];
+      /* const struct i370_operand *operand;
+	 operand = &i370_operands[fixups[i].opindex]; */
       if (fixups[i].reloc != BFD_RELOC_UNUSED)
 	{
 	  reloc_howto_type *reloc_howto = bfd_reloc_type_lookup (stdoutput, fixups[i].reloc);
@@ -2846,8 +2848,14 @@ md_atof (type, litp, sizep)
       return "bad call to md_atof";
     }
 
-  /* 360/370/390 have three three formats:
-   * Hex, Binary and Decimal. Support ony "binary" (IEEE). */
+  /* 360/370/390 have three different float formats:
+     H Hex, which is the old-style, 24-bit or 56-bit mantissa
+     B Binary, which is IEEE, 24-bit or 53-bit mantissa
+     D Decimal, which is uhh, decimal.
+
+     Support only "Binary" (IEEE).
+     FIXME: Add support for Hex.
+  */
   t = atof_ieee (input_line_pointer, type, words);
   if (t)
     input_line_pointer = t;
