@@ -37,6 +37,10 @@ extern enum bfd_architecture i370_arch (void);
 /* The target BFD format.  */
 #define TARGET_FORMAT ("elf32-i370")
 
+/* Pseudo-ops do not begin with a dot. */
+extern bool i370_no_pseudo_dot;
+#define NO_PSEUDO_DOT i370_no_pseudo_dot
+
 /* Permit temporary numeric labels.  */
 #define LOCAL_LABELS_FB 1
 
@@ -44,7 +48,7 @@ extern enum bfd_architecture i370_arch (void);
  * e.g. =E'3.14159' or =XL4'cacad0d0' */
 #define SINGLE_QUOTE_STRINGS
 
-/* $ is used to refer to the current location.  */
+/* $ is (not) used to refer to the current location.  */
 /* #define DOLLAR_DOT */
 
 /* foo-. gets turned into PC relative relocs.  */
