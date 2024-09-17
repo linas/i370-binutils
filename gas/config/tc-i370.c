@@ -29,6 +29,8 @@
 #include "safe-ctype.h"
 #include "subsegs.h"
 
+extern char *read_symbol_name (void); /* Instead of #include "read.h" */
+
 #include "opcode/i370.h"
 
 #ifdef OBJ_ELF
@@ -234,15 +236,16 @@ reg_name_search (const struct pd_reg *regs,
   return -1;
 }
 
-/* Summary of register_name().
+/* register_name(): parse expression containing a register name.
 
-   in:        Input_line_pointer points to 1st char of operand.
+   in:  Input_line_pointer points to 1st char of operand.
 
-   out:        An expressionS.
-        The operand may have been a register: in this case, X_op == O_register,
-        X_add_number is set to the register number, and truth is returned.
-          Input_line_pointer->(next non-blank) char after operand, or is in its
-        original state.  */
+   out: An expressionS.
+
+   The operand may have been a register: in this case, X_op == O_register,
+   X_add_number is set to the register number, and truth is returned.
+   Input_line_pointer->(next non-blank) char after operand, or is in its
+   original state.  */
 
 static bool
 register_name (expressionS *expressionP)
@@ -252,13 +255,12 @@ register_name (expressionS *expressionP)
   char *start;
   char c;
 
-  /* Find the spelling of the operand.  */
+  /* Allow percent sign, so %r13 and %13 as register names.  */
   start = name = input_line_pointer;
   if (name[0] == '%' && ISALPHA (name[1]))
     name = ++input_line_pointer;
 
-  else if (!reg_names_p)
-    return false;
+  /* else if (!reg_names_p) return false; */
 
   while (' ' == *name)
     name = ++input_line_pointer;
@@ -1084,7 +1086,7 @@ i370_ds (int unused ATTRIBUTE_UNUSED)
 	  alignment = 2;
 	  break;
 	case 'D':  /* 64-bit */
-	case 'L':  /* 128-bit but 84-bit aligned */
+	case 'L':  /* 128-bit but 64-bit aligned */
 	  alignment = 3;
 	  break;
 	default:
@@ -1559,10 +1561,13 @@ i370_addr_offset (expressionS *exx)
   return true;
 }
 
-/* Create IBM Floating Point Decimal */
+/* Create IBM Floating Point Decimal
+   TODO: Implement me!  */
 static void
-gen_to_decimal_words (LITTLENUM_TYPE *, int)
+gen_to_decimal_words (LITTLENUM_TYPE *words, int type ATTRIBUTE_UNUSED)
 {
+  memset(words, 0, BIGNUM_CACHE * sizeof(LITTLENUM_TYPE));
+
   as_bad (_("IBM Decimal floats currently not supported"));
 }
 
@@ -1994,6 +1999,7 @@ i370_using (int ignore ATTRIBUTE_UNUSED)
       && O_uminus != baseaddr.X_op)
     as_bad (_(".using: base address expression illegal or too complex"));
 
+  /* Skip past the comma.  */
   if (*input_line_pointer != '\0') ++input_line_pointer;
 
   /* The second arg to using had better be a register.  */
@@ -2485,8 +2491,8 @@ md_assemble (char *str)
      md_apply_fix.  */
   for (i = 0; i < fc; i++)
     {
-      // const struct i370_operand *operand;
-      // operand = &i370_operands[fixups[i].opindex];
+      /* const struct i370_operand *operand;
+	 operand = &i370_operands[fixups[i].opindex]; */
       if (fixups[i].reloc != BFD_RELOC_UNUSED)
 	{
 	  reloc_howto_type *reloc_howto = bfd_reloc_type_lookup (stdoutput, fixups[i].reloc);
@@ -2607,9 +2613,13 @@ i370_tc (int ignore ATTRIBUTE_UNUSED)
 const char *
 md_atof (int type, char *litp, int *sizep)
 {
-  /* 360/370/390 have three three formats:
-     Hex, Binary and Decimal. Support only "Binary" (IEEE).
-     FIXME: Add support for Hex i.e. IBM floats/doubles.
+  /* 360/370/390 have three different float formats:
+     H Hex, which is the old-style, 24-bit or 56-bit mantissa
+     B Binary, which is IEEE, 24-bit or 53-bit mantissa
+     D Decimal, which is uhh, decimal.
+
+     Support only "Binary" (IEEE).
+     FIXME: Add support for Hex.
   */
   return ieee_md_atof (type, litp, sizep, true);
 }
