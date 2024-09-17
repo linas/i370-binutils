@@ -1083,41 +1083,78 @@ i370_dc (int unused ATTRIBUTE_UNUSED)
 /* Provide minimal support for DS Define Storage.
    DS 0H should align on a half-word
    DS 4000C should increment 4000 bytes (i.e. same as .space 4000)
- */
+
+   See the function s_space() in read.c for examples on how to
+   handle other section types (absolute, common, etc.) and how
+   to parse more complex expressions. */
 
 static void
 i370_ds (int unused ATTRIBUTE_UNUSED)
 {
-  /* DS 0H or DS 0F or DS 0D.  */
-  if ('0' == *input_line_pointer)
+  expressionS val;
+  addressT total;
+  int mult = 1;
+  int alignment = 0;  /* Left shift 1 << align.  */
+  char alchar = 'C';
+  char *palchar;
+
+  /* The expression() below tries to interpret the suffix as a radix.
+     We don't want that; we just want ordinary base-10. */
+  palchar = input_line_pointer;
+  for ( ; ISALNUM (*palchar) && !ISALPHA (*palchar); palchar++) {}
+  if (ISALPHA (*palchar))
     {
-      int alignment = 0;  /* Left shift 1 << align.  */
-      input_line_pointer ++;
-      switch (*input_line_pointer++)
-	{
-	case 'H':  /* 16-bit */
-	  alignment = 1;
-	  break;
-	case 'F':  /* 32-bit */
-	  alignment = 2;
-	  break;
-	case 'D':  /* 64-bit */
-	case 'L':  /* 128-bit but 64-bit aligned */
-	  alignment = 3;
-	  break;
-	default:
-	  as_bad (_("unsupported alignment"));
-	  return;
-	}
+      alchar = *palchar;
+      *palchar = ' ';
+    }
+
+  expression (&val);
+  if (val.X_op != O_constant)
+    as_bad(_("Unsupported DS format"));
+
+  switch (alchar)
+  {
+  case 'C':  /* 8-bit */
+    mult = 1;
+    break;
+  case 'H':  /* 16-bit */
+    alignment = 1;
+    mult = 2;
+    break;
+  case 'F':  /* 32-bit */
+    alignment = 2;
+    mult = 4;
+    break;
+  case 'D':  /* 64-bit */
+    alignment = 2;
+    mult = 8;
+    break;
+  case 'L':  /* 128-bit, but 64-bit aligned */
+    alignment = 2;
+    mult = 16;
+    break;
+  default:
+    as_bad (_("Unsupported DS alignment"));
+    return;
+  }
+
+  /* Align, if needed. */
+  if (0 < alignment)
+    {
       frag_align (alignment, 0, 0);
       record_alignment (now_seg, alignment);
     }
-  else
-    as_bad (_("this DS form not yet supported"));
 
-  /* See the function s_space() in read.c for examples on how to
-     handle other section types (absolute, common, etc.) and how
-     to parse more complex expressions */
+  /* Expressions such as DS 0H or DS 0F or DS 0D force alignment only;
+   * no space is reserved.  */
+  if (0 < val.X_add_number)
+    {
+      total = mult * val.X_add_number;
+      frag_var (rs_fill, 1, 1, (relax_substateT) 0, (symbolS *) 0,
+		(offsetT) total, (char *) 0);
+    }
+
+  demand_empty_rest_of_line ();
 }
 
 /* Solaris pseudo op to change to the .rodata section.  */
