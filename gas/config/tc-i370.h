@@ -28,12 +28,11 @@ struct fix;
 #define TARGET_BYTES_BIG_ENDIAN 1
 #endif
 
+#define md_number_to_chars number_to_chars_bigendian
+
 /* The target BFD architecture.  */
 #define TARGET_ARCH (i370_arch ())
 extern enum bfd_architecture i370_arch (void);
-
-/* Whether or not the target is big endian.  */
-extern int target_big_endian;
 
 /* The target BFD format.  */
 #define TARGET_FORMAT ("elf32-i370")
@@ -62,6 +61,9 @@ extern int target_big_endian;
 extern long md_pcrel_from_section (struct fix *, segT);
 
 #define md_operand(x)
+
+#define TC_CONS_FIX_NEW cons_fix_new_i370
+extern void cons_fix_new_i370 (fragS *, int, int, expressionS *, bfd_reloc_code_real_type);
 
 #define tc_comment_chars i370_comment_chars
 extern const char *i370_comment_chars;

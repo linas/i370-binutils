@@ -38,9 +38,6 @@
 
 /* This is the assembler for the System/390 Architecture.  */
 
-/* Tell the main code what the endianness is.  */
-extern int target_big_endian;
-
 /* Size ot literal pool/ltorg to print; #include "gas/listing.h" */
 extern int listing_lhs_cont_lines;
 
@@ -1906,6 +1903,7 @@ i370_ltorg (int ignore ATTRIBUTE_UNUSED)
 		  generic_bignum[2] = literals[lit_count].bignum[2];
 		  generic_bignum[3] = literals[lit_count].bignum[3];
 		}
+
 	      emit_expr (&(literals[lit_count].exp), literals[lit_count].size);
 	      byte_count += literals[lit_count].size;
 	    }
@@ -1922,6 +1920,38 @@ i370_ltorg (int ignore ATTRIBUTE_UNUSED)
   short_poolP = NULL;
   byte_poolP = NULL;
   lit_pool_num++;
+}
+
+/* This fix_new is called by cons via TC_CONS_FIX_NEW.	*/
+
+void
+cons_fix_new_i370 (fragS *	frag,
+		  int		where,
+		  int		size,
+		  expressionS * exp,
+		  bfd_reloc_code_real_type reloc)
+{
+  int pcrel = 0;
+
+  /* Pick a reloc. */
+  switch (size)
+    {
+    case 1:
+      reloc = BFD_RELOC_8;
+      break;
+    case 2:
+      reloc = BFD_RELOC_16;
+      break;
+    case 4:
+    default:
+      reloc = BFD_RELOC_32;
+      break;
+    case 8:
+      reloc = BFD_RELOC_64;
+      break;
+    }
+
+  fix_new_exp (frag, where, size, exp, pcrel, reloc);
 }
 
 #endif /* LITERAL_POOL_SUPPORT */
@@ -2571,17 +2601,10 @@ const char *
 md_atof (int type, char *litp, int *sizep)
 {
   /* 360/370/390 have three three formats:
-     Hex, Binary and Decimal. Support ony "binary" (IEEE). */
+     Hex, Binary and Decimal. Support only "Binary" (IEEE).
+     FIXME: Add support for Hex i.e. IBM floats/doubles.
+  */
   return ieee_md_atof (type, litp, sizep, true);
-}
-
-/* Write a value out to the object file, using the appropriate
-   endianness.  */
-
-void
-md_number_to_chars (char *buf, valueT val, int n)
-{
-  number_to_chars_bigendian (buf, val, n);
 }
 
 /* Align a section (I don't know why this is machine dependent).  */

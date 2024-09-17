@@ -1321,7 +1321,7 @@ i370_elf_relocate_section (bfd *output_bfd,
 	}
 
 #ifdef DEBUG
-      fprintf (stderr, "\ttype = %s (%d), name = %s, symbol index = %ld, offset = %ld, addend = %ld\n",
+      fprintf (stderr, "\ttype = %s (%d), name = %s, symbol index = %ld, offset = %lx, addend = %lx\n",
 	       howto->name,
 	       (int)r_type,
 	       sym_name,
