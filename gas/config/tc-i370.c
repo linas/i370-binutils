@@ -935,38 +935,32 @@ unsigned char ebcasc[256] =
      0x38, 0x39, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF
 };
 
-/* ebcdic translation tables needed for 3270 support */
+/* EBCDIC translation tables needed for 3270 support.  */
 static void
-i370_ebcdic (unused)
-     int unused ATTRIBUTE_UNUSED;
+i370_ebcdic (int unused ATTRIBUTE_UNUSED)
 {
   char *p, *end;
   char delim = 0;
   size_t nbytes;
 
-  nbytes = strlen (input_line_pointer);
-  end = input_line_pointer + nbytes;
-  while ('\r' == *end) end --;
-  while ('\n' == *end) end --;
-
   delim = *input_line_pointer;
-  if (('\'' == delim) || ('\"' == delim)) {
-    input_line_pointer ++;
-    end = rindex (input_line_pointer, delim);
-  }
+  if (('\'' == delim) || ('\"' == delim)) input_line_pointer++;
+  end = input_line_pointer;
+  while (('\r' != *end) && ('\n' != *end)) end++;
+  end --;
+  if (delim != *end) end++;
+  *end = '\0';
+  nbytes = end - input_line_pointer + 1;
 
-  if (end > input_line_pointer)
+  p = frag_more (nbytes);
+  while (end > input_line_pointer)
     {
-      nbytes = end - input_line_pointer +1;
-      p = frag_more (nbytes);
-      while (end > input_line_pointer)
-	{
-	  *p = ascebc [(unsigned char) (*input_line_pointer)];
-	  ++p; ++input_line_pointer;
-	}
-      *p = '\0';
+      *p = ascebc [(unsigned char) (*input_line_pointer)];
+      ++p; ++input_line_pointer;
     }
-  if (delim == *input_line_pointer) ++input_line_pointer;
+  *p = '\0';
+
+  ++input_line_pointer;
 }
 
 
