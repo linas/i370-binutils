@@ -945,46 +945,229 @@ i370_entry (int unused ATTRIBUTE_UNUSED)
 }
 
 
+#define BIGNUM_CACHE 8    /* Eight LITTLENUM_TYPE's so 16 bytes total */
+
+/* Create IBM Floating Point Decimal
+   TODO: Implement me!  */
 static void
-i370_atof (int type, int subtype, char *litp, int *sizep)
+gen_to_decfloat_words (LITTLENUM_TYPE *words, int type ATTRIBUTE_UNUSED)
 {
-  /* 360/370/390 have two three formats:
-     H Hex, which is the old-style, 24-bit or 56-bit mantissa
-     B Binary, which is IEEE, 24-bit or 53-bit mantissa
-     D Decimal, which is uhh, decimal.
-  */
-  switch (subtype)
+  memset(words, 0, BIGNUM_CACHE * sizeof(LITTLENUM_TYPE));
+
+  as_bad (_("IBM Decimal floats currently not supported"));
+}
+
+/* Create IBM Floating Point Hex. This is probably wrong,
+   Its a crude approximation for what it should be.
+ */
+static void
+gen_to_hexfloat_words (LITTLENUM_TYPE *words, int type)
+{
+  memset(words, 0, BIGNUM_CACHE * sizeof(LITTLENUM_TYPE));
+
+  /* Sign bits other than +/- are NaN and inf and qNaN and so on.
+     See struct FLONUM_STRUCT for details. */
+  if ('-' == generic_floating_point_number.sign)
+    words[0] = 0x8000;
+  else if ('+' != generic_floating_point_number.sign)
+    as_bad("unhandled sign value in float point");
+
+  /* The below is incorrect, but vaguely approximate for
+     the IBM hex format. It generates 8-bit exponents and
+     24 or 56-bit mantissas.
+     See atof-ieee.c gen_to_words() for example.
+     It's ... complicated. */
+  if ('E' == type)
     {
-    case 'B':
-      ieee_md_atof (type, litp, sizep, true);
-      break;
-    case 'H':
-    case 'D':
-      as_bad (_("unsupported floating point type"));
-      break;
-    default:
-      as_bad (_("unknown floating point type"));
+      gen_to_words(words, 2, 8);
+    }
+  else if ('D' == type)
+    {
+      gen_to_words(words, 4, 8);
     }
 }
 
-/* DC Define Const  is only partially supported. Mostly it handles
-   floats and doubles, and nothing more.
+static int
+i370_parse_const (expressionS *exp)
+{
+  char *name;
+  char delim;
+  int cons_len = 0;
+
+  name = input_line_pointer;
+  switch (name[0])
+    {
+    case 'H':
+    case 'F':
+    case 'X':
+    case 'E':  /* Single-precision float point.  */
+    case 'D':  /* Double-precision float point.  */
+    case 'L':  /* 128-bit float point.  */
+      break;
+    default:
+      as_bad (_("Invalid constant expression"));
+    }
+
+    /* H == 16-bit decimal fixed-point const; expression must be const.  */
+    /* F == decimal fixed-point const; expression must be const.  */
+    /* X == hex fixed-point const; expression must be const.  */
+    if ('H' == name[0]) cons_len = 2;
+    else if ('F' == name[0]) cons_len = 4;
+    else if ('X' == name[0]) cons_len = -1;
+    else if ('E' == name[0]) cons_len = 4;
+    else if ('D' == name[0]) cons_len = 8;
+    else if ('L' == name[0]) cons_len = 16;
+
+    /* Extract length, if it is present;
+       FIXME: assume single-digit length.  */
+    if ('L' == name[1])
+      {
+	/* Should work for ASCII and EBCDIC.  */
+	cons_len = name[2] - '0';
+	input_line_pointer += 2;
+      }
+
+    /* Advance past subtype modifier for float point */
+    if (('E' == name[0] || 'D' == name[0] || 'L' == name[0]) &&
+	('B' == name[1] || 'H' == name[1] || 'D' == name[1]))
+      input_line_pointer++;
+
+    ++input_line_pointer;
+
+    /* Get rid of pesky quotes.  */
+    delim = *input_line_pointer;
+    if (('\'' == delim) || ('\"' == delim))
+      {
+	char * clse;
+
+	++input_line_pointer;
+	clse = strchr (input_line_pointer, delim);
+	if (clse)
+	  *clse= ' ';
+	else
+	  as_bad (_("missing end-quote"));
+      }
+
+    if (('X' == name[0]) || ('E' == name[0]) ||
+       ('D' == name[0]) || ('L' == name[0]))
+      {
+#define TMPSZ 50
+	char tmp[TMPSZ];
+	char *save;
+
+	/* The length of hex constants is specified directly with L,
+	   or implied through the number of hex digits. For example:
+	   X'AB'       one byte
+	   X'abcd'     two bytes
+	   X'000000AB' four bytes
+	   XL4'AB'     four bytes, left-padded with zero.  */
+	if (('X' == name[0]) && (0 > cons_len))
+	  {
+	    int hex_len = 0;
+	    save = input_line_pointer;
+	    while (*save && ISXDIGIT (*save))
+	      {
+		hex_len++;
+		save++;
+	      }
+	    cons_len = (hex_len+1) /2;
+	  }
+
+	/* I believe this works even for XL8'dada0000beeebaaa'
+	   which should parse out to X_op == O_big
+	   Note that floats and doubles get represented as
+	   0d3.14159265358979  or 0f 2.7.  */
+	tmp[0] = '0';
+	tmp[1] = name[0];
+	tmp[2] = 0;
+	strncat (tmp, input_line_pointer, TMPSZ-5);
+	save = input_line_pointer;
+	input_line_pointer = tmp;
+	expression (exp);
+	input_line_pointer = save + (input_line_pointer-tmp-2);
+
+	/* Fix up lengths for floats and doubles.  */
+	if (O_big == exp->X_op)
+	  {
+	    LITTLENUM_TYPE fltnum[BIGNUM_CACHE];
+	    exp->X_add_number = cons_len / CHARS_PER_LITTLENUM;
+  
+	    /* Convert generic_floating_point_number to bignum.
+	     * The add_to_lit_pool will cache this, for later playback. */
+	    if ('E' == name[0]) /* 32-bit float */
+	      {
+	        if ('B' == name[1]) /* IEEE float */
+		  gen_to_words(fltnum, 2, 8);
+	        else if ('D' == name[1]) /* Decimal */
+		  gen_to_decfloat_words(fltnum, name[0]);
+	        else /* Assume "Floating Point Hex" aka old-style IBM */
+		  gen_to_hexfloat_words(fltnum, name[0]);
+  
+	        generic_bignum[0] = fltnum[1];
+	        generic_bignum[1] = fltnum[0];
+	      }
+	    else if ('D' == name[0]) /* 64-bit double */
+	      {
+	        if ('B' == name[1]) /* IEEE double */
+		  gen_to_words(fltnum, 4, 11);
+	        else if ('D' == name[1]) /* Decimal */
+		  gen_to_decfloat_words(fltnum, name[0]);
+	        else /* Assume "Floating Point Hex" aka old-style IBM */
+		  gen_to_hexfloat_words(fltnum, name[0]);
+  
+	        /* This is correct if host is LE, but what if host is BE? */
+	        generic_bignum[0] = fltnum[3];
+	        generic_bignum[1] = fltnum[2];
+	        generic_bignum[2] = fltnum[1];
+	        generic_bignum[3] = fltnum[0];
+	      }
+	    else if ('L' == name[0]) /* 128-bit double */
+	      {
+	        if ('B' == name[1]) /* IEEE double */
+		  gen_to_words(fltnum, 8, 15);
+	        else if ('D' == name[1]) /* Decimal */
+		  gen_to_decfloat_words(fltnum, name[0]);
+	        else /* Assume "Floating Point Hex" aka old-style IBM */
+		  gen_to_hexfloat_words(fltnum, name[0]);
+  
+	        /* This is correct if host is LE, but what if host is BE? */
+	        generic_bignum[0] = fltnum[7];
+	        generic_bignum[1] = fltnum[6];
+	        generic_bignum[2] = fltnum[5];
+	        generic_bignum[3] = fltnum[4];
+	        generic_bignum[4] = fltnum[3];
+	        generic_bignum[5] = fltnum[2];
+	        generic_bignum[6] = fltnum[1];
+	        generic_bignum[7] = fltnum[0];
+	      }
+	  }
+      }
+    else
+      expression (exp);
+
+    /* O_big occurs when more than 4 bytes worth gets parsed.  */
+    if ((exp->X_op != O_constant) && (exp->X_op != O_big))
+      as_bad (_("expression not a constant"));
+
+  return cons_len;
+}
+
+/* DC Define Const.
    For sample code on handling other constants, look at i370_elf_cons()
-   and also at i370_addr_cons().
 
    This code handles pseudoops of the style
    DC   D'3.141592653'   # in sysv4, .double 3.14159265
    DC   F'1'             # in sysv4, .long   1.
+   DC   X'FOOD'          # hexadecimal, length 2
+   DC   XL4'FOOD'        # hexadecimal, length 4
  */
 static void
 i370_dc (int unused ATTRIBUTE_UNUSED)
 {
-  char * p, tmp[50];
-  int nbytes=0;
   expressionS exp;
-  char type=0;
-  char subtype=0;
-  char * clse;
+  int nbytes;
+  char type;
+  char *p;
 
   if (is_it_end_of_statement ())
     {
@@ -992,78 +1175,23 @@ i370_dc (int unused ATTRIBUTE_UNUSED)
       return;
     }
 
-  /* Figure out the size.  */
-  type = *input_line_pointer++;
-  switch (type)
-    {
-    case 'H':  /* 16-bit */
-      nbytes = 2;
-      break;
-    case 'E':  /* 32-bit */
-    case 'F':  /* 32-bit */
-      nbytes = 4;
-      break;
-    case 'D':  /* 64-bit */
-      nbytes = 8;
-      break;
-    case 'L':  /* 128-bit */
-      nbytes = 16;
-      break;
-    default:
-      as_bad (_("unsupported DC type"));
-      return;
-    }
-
-  subtype = *input_line_pointer++;
-  switch (subtype)
-    {
-    case 'H':  /* Hex */
-    case 'B':  /* Binary */
-    case 'D':  /* Decimal */
-      break;
-    case 'Q':  /* Hex, Quadword alignment. */
-      subtype = 'H';
-      break;
-    default:
-      subtype = 'H'; /* If not specified, then Hex by default */
-      input_line_pointer--;
-    }
-
-  /* Get rid of pesky quotes.  */
-  if ('\'' == *input_line_pointer)
-    {
-      ++input_line_pointer;
-      clse = strchr (input_line_pointer, '\'');
-      if (clse)
-	*clse= ' ';
-      else
-	as_bad (_("missing end-quote"));
-    }
-
-  if ('\"' == *input_line_pointer)
-    {
-      ++input_line_pointer;
-      clse = strchr (input_line_pointer, '\"');
-      if (clse)
-	*clse= ' ';
-      else
-	as_bad (_("missing end-quote"));
-    }
+  type = *input_line_pointer;
+  nbytes = i370_parse_const(&exp);
 
   switch (type)
     {
-    case 'H':  /* 16-bit */
-    case 'F':  /* 32-bit */
-      expression (&exp);
+    case 'H':  /* 16-bit decimal */
+    case 'F':  /* 32-bit decimal */
+    case 'X':  /* variable length hex */
       emit_expr (&exp, nbytes);
       break;
-    case 'E':  /* 32-bit */
-    case 'D':  /* 64-bit */
-    case 'L':  /* 128-bit */
-      if ('E' == type) type = 'f';
-      i370_atof (type, subtype, tmp, &nbytes);
+    case 'E':  /* 32-bit float */
+    case 'D':  /* 64-bit double */
+    case 'L':  /* 128-bit long double */
       p = frag_more (nbytes);
-      memcpy (p, tmp, nbytes);
+
+      /* XXX I'm not sure this is right ...? */
+      memcpy (p, generic_bignum, nbytes);
       break;
     default:
       as_bad (_("unsupported DC type"));
@@ -1338,7 +1466,6 @@ i370_elf_validate_fix (fixS *fixp, segT seg)
      -- it's used to generate the *_poolP symbol name.  */
 
 #define MAX_LITERAL_POOL_SIZE 1024
-#define BIGNUM_CACHE 8    /* Eight LITTLENUM_TYPE's so 16 bytes total */
 
 typedef struct literalS
 {
@@ -1608,45 +1735,6 @@ i370_addr_offset (expressionS *exx)
   return true;
 }
 
-/* Create IBM Floating Point Decimal
-   TODO: Implement me!  */
-static void
-gen_to_decimal_words (LITTLENUM_TYPE *words, int type ATTRIBUTE_UNUSED)
-{
-  memset(words, 0, BIGNUM_CACHE * sizeof(LITTLENUM_TYPE));
-
-  as_bad (_("IBM Decimal floats currently not supported"));
-}
-
-/* Create IBM Floating Point Hex. This is probably wrong,
-   Its a crude approximation for what it should be.
- */
-static void
-gen_to_hex_words (LITTLENUM_TYPE *words, int type)
-{
-  memset(words, 0, BIGNUM_CACHE * sizeof(LITTLENUM_TYPE));
-
-  /* Sign bits other than +/- are NaN and inf and qNaN and so on.
-     See struct FLONUM_STRUCT for details. */
-  if ('-' == generic_floating_point_number.sign)
-    words[0] = 0x8000;
-  else if ('+' != generic_floating_point_number.sign)
-    as_bad("unhandled sign value in float point");
-
-  /* The below is incorrect, but vaguely approximate for
-     the IBM hex format. It generates 8-bit exponents and
-     24 or 56-bit mantissas.
-     See atof-ieee.c gen_to_words() for example.
-     It's ... complicated. */
-  if ('E' == type)
-    {
-      gen_to_words(words, 2, 8);
-    }
-  else if ('D' == type)
-    {
-      gen_to_words(words, 4, 8);
-    }
-}
 
 /* Handle address constants of various sorts.  */
 /* The currently supported types are
@@ -1662,7 +1750,6 @@ i370_addr_cons (expressionS *exp)
   char *name;
   char *sym_name, delim;
   int name_len;
-  int hex_len = 0;
   int cons_len = 0;
 
   name = input_line_pointer;
@@ -1689,165 +1776,13 @@ i370_addr_cons (expressionS *exp)
       *(sym_name + name_len) = delim;
 
       break;
-    case 'H':
-    case 'F':
-    case 'X':
+    case 'H':  /* 16-bit decimal */
+    case 'F':  /* 32-bit decimal */
+    case 'X':  /* hex, variable length */
     case 'E':  /* Single-precision float point.  */
     case 'D':  /* Double-precision float point.  */
     case 'L':  /* 128-bit float point.  */
-
-      /* H == 16-bit fixed-point const; expression must be const.  */
-      /* F == fixed-point const; expression must be const.  */
-      /* X == fixed-point const; expression must be const.  */
-      if ('H' == name[0]) cons_len = 2;
-      else if ('F' == name[0]) cons_len = 4;
-      else if ('X' == name[0]) cons_len = -1;
-      else if ('E' == name[0]) cons_len = 4;
-      else if ('D' == name[0]) cons_len = 8;
-      else if ('L' == name[0]) cons_len = 16;
-
-      /* Extract length, if it is present;
-	 FIXME: assume single-digit length.  */
-      if ('L' == name[1])
-	{
-	  /* Should work for ASCII and EBCDIC.  */
-	  cons_len = name[2] - '0';
-	  input_line_pointer += 2;
-	}
-
-      /* Advance past subtype modifier for float point */
-      if (('E' == name[0] || 'D' == name[0] || 'L' == name[0]) &&
-          ('B' == name[1] || 'H' == name[1] || 'D' == name[1]))
-	input_line_pointer++;
-
-      ++input_line_pointer;
-
-      /* Get rid of pesky quotes.  */
-      if ('\'' == *input_line_pointer)
-	{
-	  char * clse;
-
-	  ++input_line_pointer;
-	  clse = strchr (input_line_pointer, '\'');
-	  if (clse)
-	    *clse= ' ';
-	  else
-	    as_bad (_("missing end-quote"));
-	}
-
-      if ('\"' == *input_line_pointer)
-	{
-	  char * clse;
-
-	  ++input_line_pointer;
-	  clse = strchr (input_line_pointer, '\"');
-	  if (clse)
-	    *clse= ' ';
-	  else
-	    as_bad (_("missing end-quote"));
-	}
-
-      if (('X' == name[0]) || ('E' == name[0]) || ('D' == name[0]) || ('L' == name[0]))
-	{
-	  char tmp[50];
-	  char *save;
-
-	  /* The length of hex constants is specified directly with L,
-	     or implied through the number of hex digits. For example:
-	     =X'AB'       one byte
-	     =X'abcd'     two bytes
-	     =X'000000AB' four bytes
-	     =XL4'AB'     four bytes, left-padded with zero.  */
-	  if (('X' == name[0]) && (0 > cons_len))
-	    {
-	      save = input_line_pointer;
-	      while (*save)
-		{
-		  if (ISXDIGIT (*save))
-		    hex_len++;
-		  save++;
-		}
-	      cons_len = (hex_len+1) /2;
-	    }
-
-	  /* I believe this works even for =XL8'dada0000beeebaaa'
-	     which should parse out to X_op == O_big
-	     Note that floats and doubles get represented as
-	     0d3.14159265358979  or 0f 2.7.  */
-	  tmp[0] = '0';
-	  tmp[1] = name[0];
-	  tmp[2] = 0;
-	  strcat (tmp, input_line_pointer);
-	  save = input_line_pointer;
-	  input_line_pointer = tmp;
-	  expression (exp);
-	  input_line_pointer = save + (input_line_pointer-tmp-2);
-
-	  /* Fix up lengths for floats and doubles.  */
-	  if (O_big == exp->X_op)
-	  {
-	    LITTLENUM_TYPE fltnum[BIGNUM_CACHE];
-	    exp->X_add_number = cons_len / CHARS_PER_LITTLENUM;
-
-	    /* Convert generic_floating_point_number to bignum.
-	     * The add_to_lit_pool will cache this, for later playback. */
-	    if ('E' == name[0]) /* 32-bit float */
-	      {
-		if ('B' == name[1]) /* IEEE float */
-		  gen_to_words(fltnum, 2, 8);
-		else if ('D' == name[1]) /* Decimal */
-		  gen_to_decimal_words(fltnum, name[0]);
-		else /* Assume "Floating Point Hex" aka old-style IBM */
-		  gen_to_hex_words(fltnum, name[0]);
-
-		generic_bignum[0] = fltnum[1];
-		generic_bignum[1] = fltnum[0];
-	      }
-	    else if ('D' == name[0]) /* 64-bit double */
-	      {
-		if ('B' == name[1]) /* IEEE double */
-		  gen_to_words(fltnum, 4, 11);
-		else if ('D' == name[1]) /* Decimal */
-		  gen_to_decimal_words(fltnum, name[0]);
-		else /* Assume "Floating Point Hex" aka old-style IBM */
-		  gen_to_hex_words(fltnum, name[0]);
-
-		/* This is correct if host is LE, but what if host is BE? */
-		generic_bignum[0] = fltnum[3];
-		generic_bignum[1] = fltnum[2];
-		generic_bignum[2] = fltnum[1];
-		generic_bignum[3] = fltnum[0];
-	      }
-	    else if ('L' == name[0]) /* 128-bit double */
-	      {
-		if ('B' == name[1]) /* IEEE double */
-		  gen_to_words(fltnum, 8, 15);
-		else if ('D' == name[1]) /* Decimal */
-		  gen_to_decimal_words(fltnum, name[0]);
-		else /* Assume "Floating Point Hex" aka old-style IBM */
-		  gen_to_hex_words(fltnum, name[0]);
-
-		/* This is correct if host is LE, but what if host is BE? */
-		generic_bignum[0] = fltnum[7];
-		generic_bignum[1] = fltnum[6];
-		generic_bignum[2] = fltnum[5];
-		generic_bignum[3] = fltnum[4];
-		generic_bignum[4] = fltnum[3];
-		generic_bignum[5] = fltnum[2];
-		generic_bignum[6] = fltnum[1];
-		generic_bignum[7] = fltnum[0];
-	      }
-	  }
-	}
-      else
-	expression (exp);
-
-      /* O_big occurs when more than 4 bytes worth gets parsed.  */
-      if ((exp->X_op != O_constant) && (exp->X_op != O_big))
-	{
-	  as_bad (_("expression not a constant"));
-	  return false;
-	}
+      cons_len = i370_parse_const(exp);
       add_to_lit_pool (exp, 0x0, cons_len);
       break;
 
