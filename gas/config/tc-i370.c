@@ -914,16 +914,36 @@ i370_csect (int sect)
 }
 
 
-/* Provide minimal support for externals.
+/* HLASM externals start with two @@. Whenever we see one of these,
+   convert the @@ to underscores, and downcase the rest of the name.
+   FIXME: We probably shouldn't do this, if the target isn't HLASM...  */
+
+char * i370_canonicalize_symbol_name (char *name)
+{
+  if ('@' == name[0])
+    {
+      name[0] = '_';
+      if ('@' == name[1])
+	name[1] = '_';
+
+      /* Downcase, also */
+      for (size_t i=1; i<strlen(name); i++)
+	name[i] = TOLOWER(name[i]);
+    }
+  return name;
+}
+
+/* Provide minimal support for HLASM externals.
 
    For example,
        ENTRY @@CRT0
    should be translated to
        ENTRY __crt0
    Note the "@" is translated to "_" and the rest of the external
-   identifier is translated to lowercase.
+   identifier is translated to lowercase. This is done by
+   i370_canonicalize_symbol_name() above.
 
-   This is same as the elf `.globl __crt0`
+   This is meant to be more or less the same as the elf `.globl __crt0`
    See the function s_globl() in read.c for a fancy example.
 */
 
@@ -935,22 +955,13 @@ i370_entry (int unused ATTRIBUTE_UNUSED)
   symbolS *symbolP;
 
   name = input_line_pointer;
-#if 0
-  if ('@' == *input_line_pointer)
-    {
-      *input_line_pointer++ = '_';
-      if ('@' == *input_line_pointer)
-	*input_line_pointer++ = '_';
-    }
-#endif
-
   end = strpbrk(input_line_pointer, " \r\n");
-  while (input_line_pointer < end)
-    {
-      *input_line_pointer = TOLOWER(*input_line_pointer);
-      input_line_pointer++;
-    }
+  if (NULL == end)
+    as_bad(_("enexpected end of file"));
+
   *end = 0x0;
+  input_line_pointer = end;
+  input_line_pointer++;
 
   symbolP = symbol_find_or_make (name);
   S_SET_EXTERNAL (symbolP);
