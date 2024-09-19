@@ -849,7 +849,7 @@ i370_ebcdic (int unused ATTRIBUTE_UNUSED)
   end --;
   if (delim != *end) end++;
   *end = '\0';
-  nbytes = end - input_line_pointer + 1;
+  nbytes = end - input_line_pointer;
 
   p = frag_more (nbytes);
   while (end > input_line_pointer)
@@ -857,7 +857,6 @@ i370_ebcdic (int unused ATTRIBUTE_UNUSED)
       *p = ascebc [(unsigned char) (*input_line_pointer)];
       ++p; ++input_line_pointer;
     }
-  *p = '\0';
 
   ++input_line_pointer;
 }
