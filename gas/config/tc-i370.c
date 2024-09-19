@@ -29,8 +29,6 @@
 #include "safe-ctype.h"
 #include "subsegs.h"
 
-extern char *read_symbol_name (void); /* Instead of #include "read.h" */
-
 #include "opcode/i370.h"
 
 #ifdef OBJ_ELF
@@ -923,24 +921,29 @@ static void
 i370_entry (int unused ATTRIBUTE_UNUSED)
 {
   char *name;
+  char *end;
   symbolS *symbolP;
-  size_t i;
 
-  if ((name = read_symbol_name ()) == NULL)
-    return;
-
-  if ('@' == name[0])
+  name = input_line_pointer;
+#if 0
+  if ('@' == *input_line_pointer)
     {
-      name[0] = '_';
-      if ('@' == name[1]) name[1] = '_';
+      *input_line_pointer++ = '_';
+      if ('@' == *input_line_pointer)
+	*input_line_pointer++ = '_';
     }
+#endif
 
-  for (i=0; i< strlen(name); i++)
-    name[i] = TOLOWER(name[i]);
+  end = strpbrk(input_line_pointer, " \r\n");
+  while (input_line_pointer < end)
+    {
+      *input_line_pointer = TOLOWER(*input_line_pointer);
+      input_line_pointer++;
+    }
+  *end = 0x0;
 
   symbolP = symbol_find_or_make (name);
   S_SET_EXTERNAL (symbolP);
-  free (name);
   demand_empty_rest_of_line ();
 }
 

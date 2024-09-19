@@ -41,7 +41,7 @@ extern enum bfd_architecture i370_arch (void);
 extern bool i370_no_pseudo_dot;
 #define NO_PSEUDO_DOT i370_no_pseudo_dot
 
-/* Labels withoout a trailing colon. */
+/* Labels without a trailing colon. */
 extern bool i370_labels_without_colons;
 #define LABELS_WITHOUT_COLONS i370_labels_without_colons
 
