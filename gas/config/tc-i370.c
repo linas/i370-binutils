@@ -954,6 +954,7 @@ i370_entry (int unused ATTRIBUTE_UNUSED)
 {
   char *name;
   char *end;
+  char sav;
   symbolS *symbolP;
 
   name = input_line_pointer;
@@ -961,12 +962,14 @@ i370_entry (int unused ATTRIBUTE_UNUSED)
   if (NULL == end)
     as_bad(_("enexpected end of file"));
 
+  sav = *end;
   *end = 0x0;
   input_line_pointer = end;
-  input_line_pointer++;
 
   symbolP = symbol_find_or_make (name);
   S_SET_EXTERNAL (symbolP);
+
+  *end = sav;
   demand_empty_rest_of_line ();
 }
 
