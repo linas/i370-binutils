@@ -53,6 +53,13 @@ extern bfd_boolean i370_no_pseudo_dot;
 extern bfd_boolean i370_labels_without_colons;
 #define LABELS_WITHOUT_COLONS i370_labels_without_colons
 
+/* HLASM allows symbols starting with two @@ */
+#define LEX_AT (LEX_BEGIN_NAME | LEX_NAME) /* Can have @'s inside labels.  */
+
+/* Rewrite the @@ in HLASM symbols */
+extern char * i370_canonicalize_symbol_name(char *);
+#define tc_canonicalize_symbol_name i370_canonicalize_symbol_name
+
 /* Permit temporary numeric labels.  */
 #define LOCAL_LABELS_FB 1
 
