@@ -1024,24 +1024,24 @@ i370_entry (int unused ATTRIBUTE_UNUSED)
   char *name;
   char *end;
   symbolS *symbolP;
-  size_t i;
 
-  name = ++input_line_pointer;
-  if (name == NULL)
-    return;
-
-  /* Only up to whitespace */
-  end = strpbrk (input_line_pointer, " \t\n\r");
-  if (end) *end = 0;
-
-  if ('@' == name[0])
+  name = input_line_pointer;
+#if 0
+  if ('@' == *input_line_pointer)
     {
-      name[0] = '_';
-      if ('@' == name[1]) name[1] = '_';
+      *input_line_pointer++ = '_';
+      if ('@' == *input_line_pointer)
+	*input_line_pointer++ = '_';
     }
+#endif
 
-  for (i=0; i< strlen(name); i++)
-    name[i] = TOLOWER(name[i]);
+  end = strpbrk(input_line_pointer, " \r\n");
+  while (input_line_pointer < end)
+    {
+      *input_line_pointer = TOLOWER(*input_line_pointer);
+      input_line_pointer++;
+    }
+  *end = 0x0;
 
   symbolP = symbol_find_or_make (name);
   S_SET_EXTERNAL (symbolP);
