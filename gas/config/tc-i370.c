@@ -1016,6 +1016,13 @@ i370_parse_const (expressionS *exp)
   name = input_line_pointer;
   switch (name[0])
     {
+    case 'A': /* A == address-of.  */
+    case 'V': /* V == extern.  */
+      ++input_line_pointer; /* Move past open-paren before parsing */
+      expression (exp);
+      cons_len = strcspn (name, ", \n\r"); /* len includes foo */
+      return cons_len;
+
     case 'H':
     case 'F':
     case 'X':
@@ -1199,6 +1206,11 @@ i370_dc (int unused ATTRIBUTE_UNUSED)
 
   switch (type)
     {
+    case 'A':  /* Address of label */
+    case 'V':  /* External Address */
+      /* Address constants are of length 4 */
+      emit_expr (&exp, 4);
+      break;
     case 'H':  /* 16-bit decimal */
     case 'F':  /* 32-bit decimal */
     case 'X':  /* variable length hex */
@@ -1783,12 +1795,11 @@ i370_addr_cons (expressionS *exp)
     {
     case 'A': /* A == address-of.  */
     case 'V': /* V == extern.  */
-      ++input_line_pointer;
+      ++input_line_pointer; /* Skip open paren */
       expression (exp);
 
-      /* We use a simple string name to collapse together
-         multiple references to the same address literal.  */
-      name_len = strcspn (sym_name, ", ");
+      /* The sym_name includes the = sign, so `=V(some_extern)` */
+      name_len = strcspn (sym_name, ", \r\n");
       delim = *(sym_name + name_len);
       *(sym_name + name_len) = 0x0;
       add_to_lit_pool (exp, sym_name, 4);
