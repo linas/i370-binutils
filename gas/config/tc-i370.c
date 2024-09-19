@@ -910,6 +910,7 @@ i370_csect (int sect)
 
 char * i370_canonicalize_symbol_name (char *name)
 {
+  size_t i, namelen;
   if ('@' == name[0])
     {
       name[0] = '_';
@@ -917,7 +918,8 @@ char * i370_canonicalize_symbol_name (char *name)
 	name[1] = '_';
 
       /* Downcase, also */
-      for (size_t i=1; i<strlen(name); i++)
+      namelen = strlen(name);
+      for (i=1; i<namelen; i++)
 	name[i] = TOLOWER(name[i]);
     }
   return name;
