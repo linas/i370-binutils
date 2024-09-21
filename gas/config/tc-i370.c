@@ -1611,7 +1611,7 @@ add_to_lit_pool (expressionS *exx, char *name, int sz)
       literals[next_literal_pool_place].size = sz;
       literals[next_literal_pool_place].offset = offset_in_pool;
       if (name)
-	literals[next_literal_pool_place].sym_name = strdup (name);
+	literals[next_literal_pool_place].sym_name = xstrdup (name);
       else
 	literals[next_literal_pool_place].sym_name = NULL;
 
