@@ -48,6 +48,7 @@ extern int listing_lhs_cont_lines;
 
 bfd_boolean i370_no_pseudo_dot = FALSE;
 bfd_boolean i370_labels_without_colons = FALSE;
+bfd_boolean i370_convert_dc_to_ebcdic = FALSE;
 
 
 /* Generic assembler global variables which must be defined by all
@@ -85,11 +86,13 @@ md_show_usage (stream)
      FILE *stream;
 {
   fprintf (stream, "\
-S/370 options: (these have not yet been tested and may not work) \n\
+S/370 options:\n\
 -mhlasm         	Operate in HLASM-compatible mode\n\
+-mebcdic         	Convert DC C'foo' to EBCDIC before output\n\
 -mregnames      	Allow symbolic names for registers\n\
 -mno-regnames   	Do not allow symbolic names for registers\n\
 -u              	ignored\n");
+
 #ifdef OBJ_ELF
   fprintf (stream, "\
 -mrelocatable        	support for GCC's -mrelocatble option\n\
@@ -138,7 +141,7 @@ const pseudo_typeS md_pseudo_table[] =
   { "entry",    i370_entry,	0 },
 
   /* Enable ebcdic strings e.g. for 3270 support. */
-  { "ebcdic",   i370_ebcdic,	0 },
+  { "ebcdic",   i370_ebcdic,	1 },
 
 #ifdef OBJ_ELF
   { "long",     i370_elf_cons,	4 },
@@ -500,6 +503,14 @@ md_parse_option (c, arg)
 	  reg_names_p = FALSE;
 	  i370_no_pseudo_dot = TRUE;
 	  i370_labels_without_colons = TRUE;
+
+	  /* Current default is ascii (whut???) */
+	  i370_convert_dc_to_ebcdic = FALSE;
+	}
+
+      else if (strcmp (arg, "ebcdic") == 0)
+	{
+	  i370_convert_dc_to_ebcdic = TRUE;
 	}
 
       /* -m360 means to assemble for the ancient 360 architecture */
@@ -959,7 +970,7 @@ unsigned char ebcasc[256] =
 
 /* EBCDIC translation tables needed for 3270 support.  */
 static void
-i370_ebcdic (int unused ATTRIBUTE_UNUSED)
+i370_ebcdic (int do_convert)
 {
   char *p, *end;
   char delim = 0;
@@ -977,7 +988,11 @@ i370_ebcdic (int unused ATTRIBUTE_UNUSED)
   p = frag_more (nbytes);
   while (end > input_line_pointer)
     {
-      *p = ascebc [(unsigned char) (*input_line_pointer)];
+      if (do_convert)
+	*p = ascebc [(unsigned char) (*input_line_pointer)];
+      else
+	*p = *input_line_pointer;
+
       ++p; ++input_line_pointer;
     }
 
@@ -1325,6 +1340,17 @@ i370_dc (unused)
     }
 
   type = *input_line_pointer;
+  if ('C' == type) /* String constant */
+    {
+      ++input_line_pointer;
+
+      if (i370_convert_dc_to_ebcdic)
+	i370_ebcdic(1);
+      else
+	i370_ebcdic(0);
+      return;
+    }
+
   nbytes = i370_parse_const(&xexp);
 
   switch (type)
@@ -1334,11 +1360,13 @@ i370_dc (unused)
       /* Address constants are of length 4 */
       emit_expr (&xexp, 4);
       break;
+
     case 'H':  /* 16-bit decimal */
     case 'F':  /* 32-bit decimal */
     case 'X':  /* variable length hex */
       emit_expr (&xexp, nbytes);
       break;
+
     case 'E':  /* 32-bit float */
     case 'D':  /* 64-bit double */
     case 'L':  /* 128-bit long double */
@@ -1347,6 +1375,7 @@ i370_dc (unused)
       /* XXX I'm not sure this is right ...? */
       memcpy (p, generic_bignum, nbytes);
       break;
+
     default:
       as_bad ("unsupported DC type");
       return;
