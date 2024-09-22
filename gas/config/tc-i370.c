@@ -1753,7 +1753,11 @@ symbol_locate (symbolS *symbolP,
    character is considered to be a label (since symbols
    can never be operands), and since we've already handled
    register operands. For example, "BL .L33" branch low
-   to .L33 RX form insn frequently terminates for-loops.  */
+   to .L33 RX form insn frequently terminates for-loops.
+
+   Local labels can start with underscores; this is for
+   MVS/HLASM compatibility.
+  */
 
 static bool
 i370_addr_offset (expressionS *exx)
@@ -1769,7 +1773,7 @@ i370_addr_offset (expressionS *exx)
     {
       if (ISDIGIT (*lab))
 	all_digits = 1;
-      else if (ISALPHA (*lab))
+      else if (ISALPHA (*lab) || '_' == *lab)
 	{
 	  if (!all_digits)
 	    {
