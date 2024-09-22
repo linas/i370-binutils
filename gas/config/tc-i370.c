@@ -138,6 +138,8 @@ static const struct pd_reg pre_defined_registers[] =
   { "arg", 11 },   /* Argument Pointer.  */
   { "base", 3 },   /* Base Reg.  */
 
+  { "dsa", 13 },   /* Stack pointer */
+
   { "f.0", 0 },    /* Floating point registers.  */
   { "f.2", 2 },
   { "f.4", 4 },
@@ -148,7 +150,6 @@ static const struct pd_reg pre_defined_registers[] =
   { "f4", 4 },
   { "f6", 6 },
 
-  { "dsa",13 },    /* Stack pointer.  */
   { "lr", 14 },    /* Link Register.  */
   { "pgt", 4 },    /* Page Origin Table Pointer.  */
 
@@ -178,6 +179,7 @@ static const struct pd_reg pre_defined_registers[] =
   { "r.tca", 12 },  /* Pointer to the table of contents.  */
   { "r.toc", 12 },  /* Pointer to the table of contents.  */
 
+#if !defined(HOST_EBCDIC)
   { "r0", 0 },      /* More general purpose registers.  */
   { "r1", 1 },
   { "r10", 10 },
@@ -194,14 +196,33 @@ static const struct pd_reg pre_defined_registers[] =
   { "r7", 7 },
   { "r8", 8 },
   { "r9", 9 },
+#endif
 
   { "rbase", 3 },  /* Base Reg.  */
 
   { "rtca", 12 },  /* Pointer to the table of contents.  */
   { "rtoc", 12 },  /* Pointer to the table of contents.  */
 
-  { "sp", 13 },   /* Stack Pointer.  */
+#if defined(HOST_EBCDIC)
+  { "r0", 0 },      /* More general purpose registers.  */
+  { "r1", 1 },
+  { "r10", 10 },
+  { "r11", 11 },
+  { "r12", 12 },
+  { "r13", 13 },
+  { "r14", 14 },
+  { "r15", 15 },
+  { "r2", 2 },
+  { "r3", 3 },
+  { "r4", 4 },
+  { "r5", 5 },
+  { "r6", 6 },
+  { "r7", 7 },
+  { "r8", 8 },
+  { "r9", 9 },
+#endif
 
+  { "sp", 13 },   /* Stack Pointer.  */
 };
 
 #define REG_NAME_CNT        (sizeof (pre_defined_registers) / sizeof (struct pd_reg))
@@ -668,7 +689,7 @@ i370_elf_suffix (char **str_p, expressionS *exp_p)
 static void
 i370_elf_cons (int nbytes)   /* 1=.byte, 2=.word, 4=.long.  */
 {
-  expressionS exp;
+  expressionS xexp;
   bfd_reloc_code_real_type reloc;
 
   if (is_it_end_of_statement ())
@@ -679,11 +700,10 @@ i370_elf_cons (int nbytes)   /* 1=.byte, 2=.word, 4=.long.  */
 
   do
     {
-      expression (&exp);
-
-      if (exp.X_op == O_symbol
+      expression (&xexp);
+      if (xexp.X_op == O_symbol
           && *input_line_pointer == '@'
-          && (reloc = i370_elf_suffix (&input_line_pointer, &exp)) != BFD_RELOC_UNUSED)
+          && (reloc = i370_elf_suffix (&input_line_pointer, &xexp)) != BFD_RELOC_UNUSED)
         {
           reloc_howto_type *reloc_howto = bfd_reloc_type_lookup (stdoutput, reloc);
           int size = bfd_get_reloc_size (reloc_howto);
@@ -698,11 +718,11 @@ i370_elf_cons (int nbytes)   /* 1=.byte, 2=.word, 4=.long.  */
               char *p = frag_more ((int) nbytes);
               int offset = nbytes - size;
 
-              fix_new_exp (frag_now, p - frag_now->fr_literal + offset, size, &exp, 0, reloc);
+              fix_new_exp (frag_now, p - frag_now->fr_literal + offset, size, &xexp, 0, reloc);
             }
         }
       else
-        emit_expr (&exp, (unsigned int) nbytes);
+        emit_expr (&xexp, (unsigned int) nbytes);
     }
   while (*input_line_pointer++ == ',');
 
@@ -1006,7 +1026,7 @@ gen_to_hexfloat_words (LITTLENUM_TYPE *words, int type)
 }
 
 static int
-i370_parse_const (expressionS *exp)
+i370_parse_const (expressionS *xexp)
 {
   char *name;
   char delim;
@@ -1018,7 +1038,7 @@ i370_parse_const (expressionS *exp)
     case 'A': /* A == address-of.  */
     case 'V': /* V == extern.  */
       ++input_line_pointer; /* Move past open-paren before parsing */
-      expression (exp);
+      expression (xexp);
       cons_len = strcspn (name, ", \n\r"); /* len includes foo */
       return cons_len;
 
@@ -1108,14 +1128,14 @@ i370_parse_const (expressionS *exp)
 	strncat (tmp, input_line_pointer, TMPSZ-5);
 	save = input_line_pointer;
 	input_line_pointer = tmp;
-	expression (exp);
+	expression (xexp);
 	input_line_pointer = save + (input_line_pointer-tmp-2);
 
 	/* Fix up lengths for floats and doubles.  */
-	if (O_big == exp->X_op)
+	if (O_big == xexp->X_op)
 	  {
 	    LITTLENUM_TYPE fltnum[BIGNUM_CACHE];
-	    exp->X_add_number = cons_len / CHARS_PER_LITTLENUM;
+	    xexp->X_add_number = cons_len / CHARS_PER_LITTLENUM;
   
 	    /* Convert generic_floating_point_number to bignum.
 	     * The add_to_lit_pool will cache this, for later playback. */
@@ -1168,10 +1188,10 @@ i370_parse_const (expressionS *exp)
 	  }
       }
     else
-      expression (exp);
+      expression (xexp);
 
     /* O_big occurs when more than 4 bytes worth gets parsed.  */
-    if ((exp->X_op != O_constant) && (exp->X_op != O_big))
+    if ((xexp->X_op != O_constant) && (xexp->X_op != O_big))
       as_bad (_("expression not a constant"));
 
   return cons_len;
@@ -1189,7 +1209,7 @@ i370_parse_const (expressionS *exp)
 static void
 i370_dc (int unused ATTRIBUTE_UNUSED)
 {
-  expressionS exp;
+  expressionS xexp;
   int nbytes;
   char type;
   char *p;
@@ -1201,19 +1221,19 @@ i370_dc (int unused ATTRIBUTE_UNUSED)
     }
 
   type = *input_line_pointer;
-  nbytes = i370_parse_const(&exp);
+  nbytes = i370_parse_const(&xexp);
 
   switch (type)
     {
     case 'A':  /* Address of label */
     case 'V':  /* External Address */
       /* Address constants are of length 4 */
-      emit_expr (&exp, 4);
+      emit_expr (&xexp, 4);
       break;
     case 'H':  /* 16-bit decimal */
     case 'F':  /* 32-bit decimal */
     case 'X':  /* variable length hex */
-      emit_expr (&exp, nbytes);
+      emit_expr (&xexp, nbytes);
       break;
     case 'E':  /* 32-bit float */
     case 'D':  /* 64-bit double */
@@ -1499,7 +1519,7 @@ i370_elf_validate_fix (fixS *fixp, segT seg)
 
 typedef struct literalS
 {
-  struct expressionS  exp;
+  struct expressionS  xexp;
   char * sym_name;
   char size;  /* 1,2,4,8 or 16 */
   short offset;
@@ -1578,9 +1598,9 @@ add_to_lit_pool (expressionS *exx, char *name, int sz)
   while (lit_count < next_literal_pool_place)
     {
       if (exx->X_op == O_constant
-          && literals[lit_count].exp.X_op == exx->X_op
-          && literals[lit_count].exp.X_add_number == exx->X_add_number
-          && literals[lit_count].exp.X_unsigned == exx->X_unsigned
+          && literals[lit_count].xexp.X_op == exx->X_op
+          && literals[lit_count].xexp.X_add_number == exx->X_add_number
+          && literals[lit_count].xexp.X_unsigned == exx->X_unsigned
           && literals[lit_count].size == sz)
         break;
       else if (literals[lit_count].sym_name
@@ -1597,7 +1617,7 @@ add_to_lit_pool (expressionS *exx, char *name, int sz)
       if (next_literal_pool_place > MAX_LITERAL_POOL_SIZE)
 	as_bad (_("Literal Pool Overflow"));
 
-      literals[next_literal_pool_place].exp = *exx;
+      literals[next_literal_pool_place].xexp = *exx;
       literals[next_literal_pool_place].size = sz;
       literals[next_literal_pool_place].offset = offset_in_pool;
       if (name)
@@ -1775,7 +1795,7 @@ i370_addr_offset (expressionS *exx)
       =H'1234'        16-bit const int.  */
 
 static bool
-i370_addr_cons (expressionS *exp)
+i370_addr_cons (expressionS *xexp)
 {
   char *name;
   char *sym_name, delim;
@@ -1795,13 +1815,13 @@ i370_addr_cons (expressionS *exp)
     case 'A': /* A == address-of.  */
     case 'V': /* V == extern.  */
       ++input_line_pointer; /* Skip open paren */
-      expression (exp);
+      expression (xexp);
 
       /* The sym_name includes the = sign, so `=V(some_extern)` */
       name_len = strcspn (sym_name, ", \r\n");
       delim = *(sym_name + name_len);
       *(sym_name + name_len) = 0x0;
-      add_to_lit_pool (exp, sym_name, 4);
+      add_to_lit_pool (xexp, sym_name, 4);
       *(sym_name + name_len) = delim;
 
       break;
@@ -1811,8 +1831,8 @@ i370_addr_cons (expressionS *exp)
     case 'E':  /* Single-precision float point.  */
     case 'D':  /* Double-precision float point.  */
     case 'L':  /* 128-bit float point.  */
-      cons_len = i370_parse_const(exp);
-      add_to_lit_pool (exp, 0x0, cons_len);
+      cons_len = i370_parse_const(xexp);
+      add_to_lit_pool (xexp, 0x0, cons_len);
       break;
 
     default:
@@ -1919,7 +1939,7 @@ i370_ltorg (int ignore ATTRIBUTE_UNUSED)
 #endif /* EMIT_ADDR_CONS_SYMBOLS */
 
 	      /* Restore bignum from cache, where emit_expr can find it. */
-	      if (literals[lit_count].exp.X_op == O_big)
+	      if (literals[lit_count].xexp.X_op == O_big)
 		{
 		  generic_bignum[0] = literals[lit_count].bignum[0];
 		  generic_bignum[1] = literals[lit_count].bignum[1];
@@ -1927,7 +1947,7 @@ i370_ltorg (int ignore ATTRIBUTE_UNUSED)
 		  generic_bignum[3] = literals[lit_count].bignum[3];
 		}
 
-	      emit_expr (&(literals[lit_count].exp), literals[lit_count].size);
+	      emit_expr (&(literals[lit_count].xexp), literals[lit_count].size);
 	      byte_count += literals[lit_count].size;
 	    }
 	  lit_count ++;
@@ -2073,7 +2093,7 @@ i370_drop (int ignore ATTRIBUTE_UNUSED)
 
 struct i370_fixup
 {
-  expressionS exp;
+  expressionS xexp;
   int opindex;
   bfd_reloc_code_real_type reloc;
 };
@@ -2442,7 +2462,7 @@ md_assemble (char *str)
           /* We need to generate a fixup for this expression.  */
           if (fc >= MAX_INSN_FIXUPS)
             as_fatal ("too many fixups");
-          fixups[fc].exp = ex;
+          fixups[fc].xexp = ex;
           fixups[fc].opindex = 0;
           fixups[fc].reloc = reloc;
           ++fc;
@@ -2457,7 +2477,7 @@ md_assemble (char *str)
 
           if (fc >= MAX_INSN_FIXUPS)
             as_fatal ("too many fixups");
-          fixups[fc].exp = ex;
+          fixups[fc].xexp = ex;
           fixups[fc].opindex = *opindex_ptr;
           fixups[fc].reloc = BFD_RELOC_UNUSED;
           ++fc;
@@ -2520,7 +2540,7 @@ md_assemble (char *str)
 
 	  printf (" gwana do fixup %d \n", i);
 	  fixP = fix_new_exp (frag_now, f - frag_now->fr_literal, size,
-         		      &fixups[i].exp, reloc_howto->pc_relative,
+         		      &fixups[i].xexp, reloc_howto->pc_relative,
          		      fixups[i].reloc);
 
 	  /* Turn off complaints that the addend is too large for things like
@@ -2540,7 +2560,7 @@ md_assemble (char *str)
       else
 	{
 	  fix_new_exp (frag_now, f - frag_now->fr_literal, opcode->len,
-		       &fixups[i].exp, 0,
+		       &fixups[i].xexp, 0,
 		       ((bfd_reloc_code_real_type)
 			(fixups[i].opindex + (int) BFD_RELOC_UNUSED)));
 	}
