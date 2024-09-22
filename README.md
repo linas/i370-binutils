@@ -9,9 +9,10 @@ generic SVr4-style assembly and creating ELF binaries.
 Both this target, the i370, and the s390 target create binaries that can
 run on the IBM System/390 mainframes. However, the supported assembly
 languages are quite different. The i370 target supports two different
-styles: a "pure" HLASM-style syntax, and a mixed/extended style that
-mashes up HLASM syntax with conventional SVr4-style syntax. The s390 is
-completely different, a radical re-imagining of System/390 assembly.
+styles: a "pure" HLASM-style syntax (which includes full EBCDIC support),
+and a mixed/extended style that mashes up HLASM syntax with conventional
+SVr4-style syntax. By contrast, the s390 assembler is completely
+different, a radical re-imagining of System/390 assembly.
 
 Some comments about these two systems:
 * Both i370 and s390 were created in 1998; i370 was created by Linas
