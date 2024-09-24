@@ -64,7 +64,7 @@ static reloc_howto_type i370_elf_howto_raw[] =
 	 "R_I370_ADDR31",	/* name */
 	 false,			/* partial_inplace */
 	 0,			/* src_mask */
-	 0x7fffffff,		/* dst_mask */
+	 0xffffffff,		/* dst_mask */
 	 false),		/* pcrel_offset */
 
   /* A standard 32 bit relocation.  */
@@ -109,7 +109,7 @@ static reloc_howto_type i370_elf_howto_raw[] =
 	 "R_I370_REL31",	/* name */
 	 false,			/* partial_inplace */
 	 0,			/* src_mask */
-	 0x7fffffff,		/* dst_mask */
+	 0xffffffff,		/* dst_mask */
 	 true),			/* pcrel_offset */
 
   /* 32-bit PC relative.  */
