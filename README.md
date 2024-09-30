@@ -89,13 +89,13 @@ git checkout master
 Then build and install:
 ```
 mkdir build; cd build
-../configure --target=i370-ibm-linux
+../configure --target=i370-ibm-elf
 make -j
 sudo make install
 ```
 
 The final call to `sudo make install` copies the binaries to
-`/usr/local/i370-ibm-linux/bin`. This step is needed, as the gcc
+`/usr/local/bin/i370-ibm-elf-*`. This step is needed, as the gcc
 compiler expects to find them there.
 
 
