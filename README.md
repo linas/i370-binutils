@@ -94,10 +94,13 @@ make -j
 sudo make install
 ```
 
-The final call to `sudo make install` copies the binaries to
-`/usr/local/bin/i370-ibm-elf-*`. This step is needed, as the gcc
-compiler expects to find them there.
-
+The final call to `sudo make install` copies the binaries to two
+different places: once to `/usr/local/i370-ibm-elf/bin/` under their
+short, conventional names (`as`, `objdump`, etc.) and once to
+`/usr/local/bin/i370-ibm-elf-*`. This allows for suitable operation
+in a cross-compiler environoment, so that the binaries do int interfer
+with the host binaries, while remaining accessible to downstream tools.
+In particular, the gcc compiler expects to find them there.
 
 #### Examples
 Bug fixes can be verified with the example source demos:
