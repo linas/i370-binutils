@@ -77,6 +77,18 @@ i.e. to get labels wthout dots and trailing colons, to get working
   Version 2.9 does not contain this bug, nor do 2.30 or master.
   Claim it was fixed between 2.15 and 2.16. This is hard to fix.
 
+* The versions 2.14 and 2.30 cannot do dynamic linking (of i370 shared
+  libraries) correctly. It is missing multiple changes made to 2.43
+  that have not been backported. These include
+```
+7a9eb9aa3ae1dae41a6cb4c5c2824c226533f2d4
+a0042f85599c75657a51e1d6f9be6e5f020404db
+8403340de0e593a5535bfe90bfadf3852e6e570b
+303b74f9dadd7fd8dfdd0be3d0867e9e823844ce
+```
+  and possibly others.
+
+
 
 ### HOWTO
 There are three supported versions in this repo: 2.14, 2.30 and 2.43.
