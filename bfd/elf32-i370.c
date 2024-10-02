@@ -978,10 +978,12 @@ i370_elf_finish_dynamic_sections (bfd *output_bfd,
 
 	  indx = elf_section_data (s)->this_idx;
 	  dindx = elf_section_data (s)->dynindx;
-	  if (dindx != -1)
+	  // dindx is -1 if there are no dynamic symbols.
+	  // dindx is 0 if there are symbols in debugging sections,
+	  // but those are being stripped.
+	  if (dindx > 0)
 	    {
 	      BFD_ASSERT(indx > 0);
-	      BFD_ASSERT(dindx > 0);
 
 	      if (dindx > maxdindx)
 		maxdindx = dindx;
