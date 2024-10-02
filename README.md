@@ -93,6 +93,13 @@ mkdir build; cd build
 make -j
 sudo make install
 ```
+For `i370-binutils-2_14`, install with
+```
+sudo make install MAKEINFO=/bin/true
+```
+It seems that the old 2.14 documentation info generates errors with
+modern versions of `makeinfo`, which breaks the install. Using
+`/bin/true` (or just plain `true`) effectively bypasses the issue.
 
 The final call to `sudo make install` copies the binaries to two
 different places: once to `/usr/local/i370-ibm-elf/bin/` under their
