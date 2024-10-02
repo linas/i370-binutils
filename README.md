@@ -65,6 +65,19 @@ i.e. to get labels wthout dots and trailing colons, to get working
    i370-ibm-mvs-as -mhlasm foobar.s
 ```
 
+#### Known Bugs
+* The 2.14 version cannot be used to compile the Linux kernel. It
+  contains a bug in `do_scrub_chars` where lines containing a
+  single quote are someties mishandled, leading to breakage.
+  For example, attempting to assemble
+```
+    .string  "<4>SYSCTL: Can't register %s\n"
+```
+  results in failed handling of comment lines downstream.
+  Version 2.9 does not contain this bug, nor do 2.30 or master.
+  Claim it was fixed between 2.15 and 2.16. This is hard to fix.
+
+
 ### HOWTO
 There are three supported versions in this repo: 2.14, 2.30 and 2.43.
 Version 2.14 is supported, because this is the version that Paul Edwards
