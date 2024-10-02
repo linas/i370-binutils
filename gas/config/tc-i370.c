@@ -1230,6 +1230,9 @@ i370_parse_const (expressionS *xexp)
    DC   F'1'             # in sysv4, .long   1.
    DC   X'FOOD'          # hexadecimal, length 2
    DC   XL4'FOOD'        # hexadecimal, length 4
+
+   The above examples get aligned to 4byte boundaries, except
+   for DC   X'FOOD'  which would be on a 2-byte boundary.
  */
 static void
 i370_dc (int unused ATTRIBUTE_UNUSED)
@@ -1238,6 +1241,7 @@ i370_dc (int unused ATTRIBUTE_UNUSED)
   int nbytes;
   char type;
   char *p;
+  int alignment = 0;  /* Left shift 1 << align.  */
 
   if (is_it_end_of_statement ())
     {
@@ -1258,6 +1262,41 @@ i370_dc (int unused ATTRIBUTE_UNUSED)
     }
 
   nbytes = i370_parse_const(&xexp);
+
+  switch (type)
+    {
+    case 'H':  /* 16-bit decimal */
+      alignment = 1;
+      break;
+
+    case 'F':  /* 32-bit decimal */
+    case 'E':  /* 32-bit float */
+    case 'A':  /* Address of label */
+    case 'V':  /* External Address */
+      alignment = 2;
+      break;
+
+    case 'X':  /* variable length hex */
+      if (2 == nbytes) alignment = 1;
+      if (2 < nbytes) alignment = 2;
+      if (4 < nbytes) alignment = 3;
+      break;
+
+    case 'D':  /* 64-bit double */
+    case 'L':  /* 128-bit long double */
+      alignment = 3;
+      break;
+
+    default:
+      as_bad (_("unsupported DC type"));
+      return;
+    }
+
+  if (0 < alignment)
+    {
+      frag_align (alignment, 0, 0);
+      record_alignment (now_seg, alignment);
+    }
 
   switch (type)
     {
@@ -1337,11 +1376,11 @@ i370_ds (int unused ATTRIBUTE_UNUSED)
     mult = 4;
     break;
   case 'D':  /* 64-bit */
-    alignment = 2;
+    alignment = 3;
     mult = 8;
     break;
   case 'L':  /* 128-bit, but 64-bit aligned */
-    alignment = 2;
+    alignment = 3;
     mult = 16;
     break;
   default:
