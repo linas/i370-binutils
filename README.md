@@ -114,7 +114,7 @@ git checkout master
 Then build and install:
 ```
 mkdir build; cd build
-../configure --target=i370-ibm-elf
+../configure --target=i370-ibm-linux
 make -j
 sudo make install
 ```
