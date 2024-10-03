@@ -31,13 +31,21 @@
 int
 print_insn_i370 (bfd_vma memaddr, struct disassemble_info *info)
 {
-  bfd_byte buffer[8];
+  bfd_byte buffer[8] = {0,0,0,0,0,0,0,0};
   int status;
   i370_insn_t insn;
   const struct i370_opcode *opcode;
   const struct i370_opcode *opcode_end;
 
+  /* Avoid truncating the last insn. If the last insn is (for example)
+   * BASR r1,r14, its of length two, and the read of 6 bytes will
+   * error out. So try again, and if two bytes are still out of bounds
+   * then we really did hit the end. */
   status = (*info->read_memory_func) (memaddr, buffer, 6, info);
+  if (status != 0)
+    status = (*info->read_memory_func) (memaddr, buffer, 4, info);
+  if (status != 0)
+    status = (*info->read_memory_func) (memaddr, buffer, 2, info);
   if (status != 0)
     {
       (*info->memory_error_func) (status, memaddr, info);
