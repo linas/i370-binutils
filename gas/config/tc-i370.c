@@ -35,6 +35,9 @@
 #include "elf/i370.h"
 #endif
 
+/* true only if ch is a numeric digit */
+#define ISNUM(ch) (ISALNUM (ch) && !ISALPHA (ch))
+
 /* This is the assembler for the System/390 Architecture.  */
 
 /* Size of the literal pool/ltorg to print; #include "gas/listing.h" */
@@ -1212,6 +1215,45 @@ i370_parse_const (expressionS *xexp)
   return cons_len;
 }
 
+static void
+i370_dc_align (char type)
+{
+  int align2 = 0;  /* Power of two alignment. */
+
+  switch (type)
+    {
+    case 'H':  /* 16-bit decimal */
+      align2 = 1;
+      break;
+
+    case 'F':  /* 32-bit decimal */
+    case 'E':  /* 32-bit float */
+    case 'A':  /* Address of label */
+    case 'V':  /* External Address */
+      align2 = 2;
+      break;
+
+    case 'X':  /* variable length hex */
+      align2 = 0; /* Not aligned. Used for strings */
+      break;
+
+    case 'D':  /* 64-bit double */
+    case 'L':  /* 128-bit long double */
+      align2 = 3;
+      break;
+
+    default:
+      as_bad (_("unsupported DC type"));
+      return;
+    }
+
+  if (0 < align2)
+    {
+      frag_align (align2, 0, 0);
+      record_alignment (now_seg, align2);
+    }
+}
+
 /* DC Define Const.
    For sample code on handling other constants, look at i370_elf_cons()
 
@@ -1231,7 +1273,6 @@ i370_dc (int unused ATTRIBUTE_UNUSED)
   int nbytes;
   char type;
   char *p;
-  int alignment = 0;  /* Left shift 1 << align.  */
 
   if (is_it_end_of_statement ())
     {
@@ -1251,40 +1292,9 @@ i370_dc (int unused ATTRIBUTE_UNUSED)
       return;
     }
 
+  i370_dc_align(type);
+
   nbytes = i370_parse_const(&xexp);
-
-  switch (type)
-    {
-    case 'H':  /* 16-bit decimal */
-      alignment = 1;
-      break;
-
-    case 'F':  /* 32-bit decimal */
-    case 'E':  /* 32-bit float */
-    case 'A':  /* Address of label */
-    case 'V':  /* External Address */
-      alignment = 2;
-      break;
-
-    case 'X':  /* variable length hex */
-      alignment=0; /* Not aligned. Used for strings */
-      break;
-
-    case 'D':  /* 64-bit double */
-    case 'L':  /* 128-bit long double */
-      alignment = 3;
-      break;
-
-    default:
-      as_bad (_("unsupported DC type"));
-      return;
-    }
-
-  if (0 < alignment)
-    {
-      frag_align (alignment, 0, 0);
-      record_alignment (now_seg, alignment);
-    }
 
   switch (type)
     {
@@ -1339,7 +1349,7 @@ i370_ds (int unused ATTRIBUTE_UNUSED)
   /* The expression() below tries to interpret the suffix as a radix.
      We don't want that; we just want ordinary base-10. */
   palchar = input_line_pointer;
-  for ( ; ISALNUM (*palchar) && !ISALPHA (*palchar); palchar++) {}
+  for ( ; ISNUM (*palchar); palchar++) {}
   if (ISALPHA (*palchar))
     {
       alchar = *palchar;
@@ -1393,6 +1403,32 @@ i370_ds (int unused ATTRIBUTE_UNUSED)
     }
 
   demand_empty_rest_of_line ();
+}
+
+
+/* Support for DS and DC occuring on the same line as a label.
+ * In such a case, alginment must be done *before* the label is issued.
+ */
+bool i370_align_label(void)
+{
+  /* Look for DC or DS followed by whitespace */
+  if (('D' == *(input_line_pointer+1)) &&
+      (ISSPACE(*(input_line_pointer+3))))
+    {
+      char dtype = *(input_line_pointer+2);
+      if ('S' != dtype && 'C' != dtype)
+	{
+	  as_bad(_("Unexpected label alignment."));
+	  return true;
+	}
+
+      char* palch = input_line_pointer + 4;
+      while (ISSPACE(*palch) || ISNUM(*palch)) palch ++;
+      char atype = *palch;
+      i370_dc_align(atype);
+    }
+
+  return true;
 }
 
 /* Solaris pseudo op to change to the .rodata section.  */

@@ -37,13 +37,18 @@ extern enum bfd_architecture i370_arch (void);
 /* The target BFD format.  */
 #define TARGET_FORMAT ("elf32-i370")
 
-/* Pseudo-ops do not begin with a dot. */
+/* HLASM uses pseudo-ops that do not begin with a dot. */
 extern bool i370_no_pseudo_dot;
 #define NO_PSEUDO_DOT i370_no_pseudo_dot
 
-/* Labels without a trailing colon. */
+/* HLASM uses labels without a trailing colon. */
 extern bool i370_labels_without_colons;
 #define LABELS_WITHOUT_COLONS i370_labels_without_colons
+
+/* HLASM places alignment DC, DS after a label, not before it */
+extern bool i370_align_label(void);
+#define TC_START_LABEL_WITHOUT_COLON(NUL_CHAR, NEXT_CHAR) \
+  (!i370_labels_without_colons || i370_align_label())
 
 /* HLASM allows symbols starting with two @@ */
 #define LEX_AT (LEX_BEGIN_NAME | LEX_NAME) /* Can have @'s inside labels.  */
