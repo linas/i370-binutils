@@ -1325,6 +1325,10 @@ i370_dc_align (char type)
 
   switch (type)
     {
+    case 'C':  /* No alignment */
+      align2 = 0;
+      break;
+
     case 'H':  /* 16-bit decimal */
       align2 = 1;
       break;
