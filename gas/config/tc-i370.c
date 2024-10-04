@@ -1277,9 +1277,7 @@ i370_dc (int unused ATTRIBUTE_UNUSED)
       break;
 
     case 'X':  /* variable length hex */
-      if (2 == nbytes) alignment = 1;
-      if (2 < nbytes) alignment = 2;
-      if (4 < nbytes) alignment = 3;
+      alignment=0; /* Not aligned. Used for strings */
       break;
 
     case 'D':  /* 64-bit double */
