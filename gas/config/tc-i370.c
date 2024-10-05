@@ -28,6 +28,7 @@
 #include "as.h"
 #include "safe-ctype.h"
 #include "subsegs.h"
+#include "dwarf2dbg.h"
 
 #include "opcode/i370.h"
 
@@ -998,6 +999,8 @@ i370_entry (int unused ATTRIBUTE_UNUSED)
 
   *end = sav;
   demand_empty_rest_of_line ();
+
+  dwarf2_emit_label(symbolP);
 }
 
 
@@ -1505,6 +1508,7 @@ i370_elf_lcomm (int unused ATTRIBUTE_UNUSED)
   *p = 0;
   symbolP = symbol_find_or_make (name);
   *p = c;
+  dwarf2_emit_label(symbolP);
 
   if (S_IS_DEFINED (symbolP) && ! S_IS_COMMON (symbolP))
     {
@@ -2608,6 +2612,7 @@ md_assemble (char *str)
 
   /* Write out the instruction.  */
   f = frag_more (opcode->len);
+  dwarf2_emit_insn (opcode->len);
   if (4 >= opcode->len)
     md_number_to_chars (f, insn.i[0], opcode->len);
   else
