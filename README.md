@@ -134,6 +134,12 @@ in a cross-compiler environoment, so that the binaries do int interfer
 with the host binaries, while remaining accessible to downstream tools.
 In particular, the gcc compiler expects to find them there.
 
+#### GDB and C++
+Versions 2.30 and master include gdb. In master, gdb requires a C++
+compiler to compile. Aside from this, the rest of the package can build
+with a pure C90 compiler. The build of gdb can be disabled by adding
+`--disable-gdb` to the configure flags.
+
 #### Examples
 Bug fixes can be verified with the example source demos:
 ```
