@@ -42,6 +42,9 @@
 /* true only if ch is a numeric digit */
 #define ISNUM(ch) (ISALNUM (ch) && !ISALPHA (ch))
 
+/* true if ch is a binary digit -- zero or one. */
+#define ISBDIGIT(ch) ((ch) == '0' || (ch) == '1')
+
 /* This is the assembler for the System/390 Architecture.  */
 
 /* Tell the main code what the endianness is.  */
@@ -273,7 +276,8 @@ static const struct pd_reg pre_defined_registers[] =
   { "r.toc", 12 },  /* Pointer to the table of contents */
 
 #if !defined(HOST_EBCDIC)
-  { "r0", 0 },     /* More general purpose registers */
+  /* ASCII sort order, numbers < chars */
+  { "r0", 0 },      /* More general purpose registers.  */
   { "r1", 1 },
   { "r10", 10 },
   { "r11", 11 },
@@ -297,7 +301,8 @@ static const struct pd_reg pre_defined_registers[] =
   { "rtoc", 12 },  /* Pointer to the table of contents */
 
 #if defined(HOST_EBCDIC)
-  { "r0", 0 },     /* More general purpose registers */
+  /* EBCDIC sort order, numbers > chars */
+  { "r0", 0 },      /* More general purpose registers.  */
   { "r1", 1 },
   { "r10", 10 },
   { "r11", 11 },
@@ -364,8 +369,13 @@ reg_name_search (regs, regcount, name)
  * The operand may have been a register: in this case, X_op == O_register,
  * X_add_number is set to the register number, and truth is returned.
  * Input_line_pointer->(next non-blank) char after operand, or is in its
- * original state.  */
-
+ * original state.
+ *
+ * A variety of RS-form instructions accept masks where R2 should be,
+ * for example CLM Compare Logical Characters Under Mask. For these
+ * cases, we just pretend the mask is a register; it still has to be
+ * between 0 and 15.  Nothing else in the assembler cares about this.
+ */
 static bfd_boolean
 register_name (expressionP)
      expressionS *expressionP;
@@ -385,11 +395,24 @@ register_name (expressionP)
   while (' ' == *name)
     name = ++input_line_pointer;
 
-  /* If it's a number, treat it as a number.  If it's alpha, look to
-     see if it's in the register table.  */
+  /* If it's a number, treat it as a number.  If it's alpha, then either
+   * its a binary mask B'0101' or it's a register name in the register
+   * table.  */
   if (!ISALPHA (name[0]))
+    reg_number = get_single_number ();
+  else if ('B' == name[0])
     {
-      reg_number = get_single_number ();
+      int i;
+      /* Brute-force binary */
+      reg_number = 0;
+      for (i=0; i<4; i++)
+	if ('1' == name[i+2])
+	  reg_number |= (1 << (3-i));
+	else if ('0' != name[i+2])
+	  as_bad(_("expecting binary digit"));
+      if (name[1] != name[6])
+	  as_bad(_("expecting quoted 4-bit binary bitmask"));
+      input_line_pointer += 7;  /* Total length of B'0101' */
     }
   else
     {
@@ -1172,6 +1195,7 @@ i370_parse_const (expressionS *xexp)
       cons_len = strcspn (name, ", \n\r"); /* len includes foo */
       return cons_len;
 
+    case 'B':  /* Binary bitstring */
     case 'H':
     case 'F':
     case 'X':
@@ -1189,6 +1213,7 @@ i370_parse_const (expressionS *xexp)
     if ('H' == name[0]) cons_len = 2;
     else if ('F' == name[0]) cons_len = 4;
     else if ('X' == name[0]) cons_len = -1;
+    else if ('B' == name[0]) cons_len = -1;
     else if ('E' == name[0]) cons_len = 4;
     else if ('D' == name[0]) cons_len = 8;
     else if ('L' == name[0]) cons_len = 16;
@@ -1224,7 +1249,7 @@ i370_parse_const (expressionS *xexp)
       }
 
     if (('X' == name[0]) || ('E' == name[0]) ||
-       ('D' == name[0]) || ('L' == name[0]))
+        ('D' == name[0]) || ('L' == name[0]))
       {
 #define TMPSZ 50
 	char tmp[TMPSZ];
@@ -1245,7 +1270,22 @@ i370_parse_const (expressionS *xexp)
 		hex_len++;
 		save++;
 	      }
-	    cons_len = (hex_len+1) /2;
+	    cons_len = (hex_len+1) / 2;
+	  }
+
+	/* Just like above, but for bitstrings. For example:
+	   B'1100'     one byte 0x0c
+	   B'01011100' one byte 0x5c */
+	if (('B' == name[0]) && (0 > cons_len))
+	  {
+	    int bit_len = 0;
+	    save = input_line_pointer;
+	    while (*save && ISBDIGIT (*save))
+	      {
+		bit_len++;
+		save++;
+	      }
+	    cons_len = (bit_len+7) / 8;
 	  }
 
 	/* I believe this works even for XL8'dada0000beeebaaa'
@@ -1421,6 +1461,7 @@ i370_dc (unused)
       emit_expr (&xexp, 4);
       break;
 
+    case 'B':  /* binary bitstring */
     case 'H':  /* 16-bit decimal */
     case 'F':  /* 32-bit decimal */
     case 'X':  /* variable length hex */
@@ -2569,10 +2610,8 @@ md_assemble (str)
               input_line_pointer ++;
             }
           if (! register_name (&ex))
-            {
-              as_bad ("expecting a register for operand %ld",
-		      opindex_ptr - opcode->operands + 1);
-            }
+	    as_bad ("expecting a register or mask for operand %d",
+		    (int) (opindex_ptr - opcode->operands + 1));
         }
 
       /* Check for an address constant expression.  */
