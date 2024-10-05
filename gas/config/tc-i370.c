@@ -31,6 +31,7 @@
 #include "safe-ctype.h"
 #include "subsegs.h"
 #include "struc-symbol.h"
+#include "dwarf2dbg.h"
 
 #include "opcode/i370.h"
 
@@ -153,6 +154,8 @@ const pseudo_typeS md_pseudo_table[] =
   { "rdata",    i370_elf_rdata,	0 },
   { "rodata",   i370_elf_rdata,	0 },
   { "lcomm",    i370_elf_lcomm,	0 },
+  { "file",     (void (*) PARAMS ((int))) dwarf2_directive_file, 0},
+  { "loc",      dwarf2_directive_loc, 0},
 #endif
 
   /* This pseudo-op is used even when not generating XCOFF output.  */
@@ -2663,6 +2666,9 @@ md_assemble (str)
 
   /* Write out the instruction.  */
   f = frag_more (opcode->len);
+#ifdef OBJ_ELF
+  dwarf2_emit_insn (opcode->len);
+#endif
   if (4 >= opcode->len)
     {
       md_number_to_chars (f, insn.i[0], opcode->len);
