@@ -85,3 +85,7 @@ extern long md_pcrel_from_section (struct fix *, segT);
 
 #define tc_comment_chars i370_comment_chars
 extern const char *i370_comment_chars;
+
+#define DWARF2_LINE_MIN_INSN_LENGTH     1
+#define DWARF2_DEFAULT_RETURN_COLUMN    14  /* Link register is r14 */
+#define DWARF2_CIE_DATA_ALIGNMENT       -4  /* 32-bit arch */
