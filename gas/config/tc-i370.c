@@ -154,6 +154,12 @@ const pseudo_typeS md_pseudo_table[] =
   { "rdata",    i370_elf_rdata,	0 },
   { "rodata",   i370_elf_rdata,	0 },
   { "lcomm",    i370_elf_lcomm,	0 },
+
+  /* These are used for dwarf.  */
+  { "2byte",    i370_elf_cons,   2 },
+  { "4byte",    i370_elf_cons,   4 },
+  { "8byte",    i370_elf_cons,  8 },
+  /* These are used for dwarf2.  */
   { "file",     (void (*) PARAMS ((int))) dwarf2_directive_file, 0},
   { "loc",      dwarf2_directive_loc, 0},
 #endif
@@ -1742,6 +1748,10 @@ typedef struct literalS
 
   /* Cache for generic_floating_point_number and generic_bignum */
   LITTLENUM_TYPE bignum[BIGNUM_CACHE];
+
+#ifdef OBJ_ELF
+  struct dwarf2_line_info loc;
+#endif
 } literalT;
 
 literalT literals[MAX_LITERAL_POOL_SIZE];
@@ -1827,6 +1837,15 @@ add_to_lit_pool (expressionS *exx, char *name, int sz)
 	memcpy (literals[next_literal_pool_place].bignum,
 		generic_bignum, BIGNUM_CACHE * sizeof(LITTLENUM_TYPE));
 
+#ifdef OBJ_ELF
+      /* Record the location of the first source line to reference
+         this entry in the literal pool.  If it turns out during
+         linking that the symbol does not exist we will be able
+         to give an accurate line number for the (first use of the)
+         missing reference.  */
+      if (debug_type == DEBUG_DWARF2)
+	dwarf2_where (&literals[next_literal_pool_place].loc);
+#endif
       next_literal_pool_place++;
     }
 
@@ -2173,6 +2192,10 @@ i370_ltorg (ignore)
 		}
 	      emit_expr (&(literals[lit_count].xexp), literals[lit_count].size);
 	      byte_count += literals[lit_count].size;
+#ifdef OBJ_ELF
+	      if (debug_type == DEBUG_DWARF2)
+		dwarf2_gen_line_info (frag_now_fix (), &literals[lit_count].loc);
+#endif
 	    }
 	  lit_count ++;
 	}
