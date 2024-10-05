@@ -46,7 +46,7 @@ Multiple bugs have been reported, and are fixed in this repo:
 * Broken bignum (64-bit) support. This affected `=XL8` literals on
   32-bit arches, as well as `=E` floating point and `=D`
   double-precision constants.
-* A variety of HLASM compatibility bugs.
+* A large variety of HLASM compatibility bugs.
 
 The above fixes can be found in three branches: 2.14, 2.30 and master.
 
@@ -55,8 +55,15 @@ target is a variant of the HLASM-compatible version of gcc for the
 MVS/Open Edition/C Environment. The i370 variant uses an SVr4-style
 assembly, required in order to produce ELF binaries.
 
-This assembler supports some reasonable facsimile of HLASM.
-Most notable is that the XSD/ESD object format is absent.
+This assembler supports some reasonable facsimile of HLASM. In
+principle, this means it can work with any compiler generating HLASM.
+In practice, this is a bit untested. Besides the IBM compilers, the
+[Open Watcom v2 Project](https://github.com/open-watcom/open-watcom-v2/tree/master)
+provides a C and C++ compiler that emits HLASM (see
+[here for the generators](https://github.com/open-watcom/open-watcom-v2/tree/master/bld/cg/s37/c).)
+
+Most notable is that this version of binutils creates only ELF objects
+and binaries.  Support for the XSD/ESD object format is absent.
 
 The `-mhlasm` flag must be set run in the compatibility mode,
 i.e. to get labels wthout dots and trailing colons, to get working
@@ -123,7 +130,7 @@ The final call to `sudo make install` copies the binaries to two
 different places: once to `/usr/local/i370-ibm-elf/bin/` under their
 short, conventional names (`as`, `objdump`, etc.) and once to
 `/usr/local/bin/i370-ibm-elf-*`. This allows for suitable operation
-in a cross-compiler environoment, so that the binaries do int interfer
+in a cross-compiler environoment, so that the binaries do int interfere
 with the host binaries, while remaining accessible to downstream tools.
 In particular, the gcc compiler expects to find them there.
 
