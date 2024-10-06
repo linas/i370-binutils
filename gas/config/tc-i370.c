@@ -2094,20 +2094,16 @@ i370_ltorg (int ignore ATTRIBUTE_UNUSED)
 	{
 	  if (litsize == literals[lit_count].size)
 	    {
-#define EMIT_ADDR_CONS_SYMBOLS
-#ifdef EMIT_ADDR_CONS_SYMBOLS
-	      /* Create a bogus symbol, add it to the pool ...
-	         For the most part, I think this is a useless exercise,
-	         except that having these symbol names in the objects
-	         is vaguely useful for debugging.  */
-	      if (literals[lit_count].sym_name)
+	      /* Emit address constant symbols if the user gave the
+	         -L, --keep-locals flag. This is kind of useless,
+	         except for debugging.  */
+	      if (flag_keep_locals && literals[lit_count].sym_name)
 		{
 		  symbolS * symP = symbol_make_empty ();
 		  symbol_locate (symP, literals[lit_count].sym_name, now_seg,
-				 (valueT) frag_now_fix (), frag_now);
+		                 (valueT) frag_now_fix (), frag_now);
 		  symbol_table_insert (symP);
 		}
-#endif /* EMIT_ADDR_CONS_SYMBOLS */
 
 	      /* Restore bignum from cache, where emit_expr can find it. */
 	      if (literals[lit_count].xexp.X_op == O_big)
