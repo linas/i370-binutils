@@ -1477,6 +1477,20 @@ bool i370_align_label(void)
       while (ISSPACE(*palch) || ISNUM(*palch)) palch ++;
       char atype = *palch;
       i370_dc_align(atype);
+
+      /* We don't input_line_pointer++ here, that is done by DC/DS. */
+      return true;
+    }
+
+  /* Look for EQU followed by stuff. Ignore it. Issue the
+     the label anyway. Doing this only because I don't know
+     what the EQU is supposed to do. */
+  if (0 == strncmp(input_line_pointer+1, "EQU", 3))
+    {
+      if (strncmp(input_line_pointer+4, " *", 2))
+	as_bad(_("Unsupported label EQU assignment."));
+      input_line_pointer += sizeof("EQU *");
+      return true;
     }
 
   return true;
