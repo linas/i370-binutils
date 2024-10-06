@@ -419,6 +419,17 @@ register_name (expressionP)
       c = get_symbol_end ();
       reg_number = reg_name_search (pre_defined_registers, REG_NAME_CNT, name);
 
+      /* HLASM compat: user might stated that `MYREG6 EQU 6` and then
+       * used this in an insn: `L MYREG6,=A(foo)`, So we look up the
+       * name and use that value, if we find it.  */
+      if (reg_number < 0)
+	{
+	  symbolS* equP;
+	  equP = symbol_find(name);
+	  if (equP)
+	    reg_number = S_GET_VALUE(equP);
+	}
+
       /* Put back the delimiting char.  */
       *input_line_pointer = c;
     }
@@ -1564,13 +1575,34 @@ i370_ds (int unused ATTRIBUTE_UNUSED)
 }
 
 
-/* Stub for supporting general EQU statements.
- * These are of the form `FOO EQU 8` which is interpreted
- * as 'create a symbol whose value is 8'.
+/* Attempt at supporting general EQU statements.
+ * Expressions must evalute to a constant.
+ * Currently supported forms:
+ *    FOO EQU 8
+ *    FOO EQU 42 - 21
  */
-static void do_equ(char* token ATTRIBUTE_UNUSED)
+static void do_equ(char* token)
 {
-  as_bad(_("Unsupported symbol EQU assignment."));
+  struct expressionS ex;
+
+  /* Maybe use i370_parse_const for F'1234' type expressions? */
+  /* i370_parse_const(&ex); */
+  expression(&ex);
+
+  if (ex.X_op != O_constant)
+    {
+      as_bad(_("Expressions in EQU must be constant"));
+      return;
+    }
+
+  /* reg_section isn't written to the object file */
+  local_symbol_make(token, reg_section, &zero_address_frag, ex.X_add_number);
+
+  /* Local symbols cannot hold expressions. */
+  /* symbol_set_value_expression(symp, &ex); */
+
+  while ('\n' != *input_line_pointer) input_line_pointer++;
+  input_line_pointer--;
 }
 
 /* Support for DS and DC occuring on the same line as a label.
