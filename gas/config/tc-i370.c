@@ -1457,10 +1457,19 @@ i370_ds (int unused ATTRIBUTE_UNUSED)
 }
 
 
+/* Stub for supporting general EQU statements.
+ * These are of the form `FOO EQU 8` which is interpreted
+ * as 'create a symbol whose value is 8'.
+ */
+static void do_equ(char* token ATTRIBUTE_UNUSED)
+{
+  as_bad(_("Unsupported symbol EQU assignment."));
+}
+
 /* Support for DS and DC occuring on the same line as a label.
  * In such a case, alginment must be done *before* the label is issued.
  */
-bool i370_align_label(void)
+bool i370_align_label(char * line_start)
 {
   /* Look for DC or DS followed by whitespace */
   if (('D' == *(input_line_pointer+1)) &&
@@ -1482,18 +1491,18 @@ bool i370_align_label(void)
       return true;
     }
 
-  /* Look for EQU followed by stuff. Ignore it. Issue the
-     the label anyway. Doing this only because I don't know
-     what the EQU is supposed to do. */
-  /* Probably thei right thing to do is what s_set() in read.c
-     does. To get the symbol name, use `line_start` which is
-     char * and is defined when thus routie gets called. */
+  /* Look for EQU followed by stuff. */
   if (0 == strncmp(input_line_pointer+1, "EQU", 3))
     {
-      if (strncmp(input_line_pointer+4, " *", 2))
-	as_bad(_("Unsupported label EQU assignment."));
-      input_line_pointer += sizeof("EQU *");
-      return true;
+      input_line_pointer += 4;
+      while (ISSPACE (*input_line_pointer)) input_line_pointer++;
+      if ('*' == *input_line_pointer)
+	{
+	  input_line_pointer ++;
+	  return true;
+	}
+      do_equ(line_start);
+      return false;
     }
 
   return true;

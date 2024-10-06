@@ -46,9 +46,9 @@ extern bool i370_labels_without_colons;
 #define LABELS_WITHOUT_COLONS i370_labels_without_colons
 
 /* HLASM places alignment DC, DS after a label, not before it */
-extern bool i370_align_label(void);
+extern bool i370_align_label(char*);
 #define TC_START_LABEL_WITHOUT_COLON(NUL_CHAR, NEXT_CHAR) \
-  (!i370_labels_without_colons || i370_align_label())
+  (!i370_labels_without_colons || i370_align_label(line_start))
 
 /* HLASM allows symbols starting with two @@ */
 #define LEX_AT (LEX_BEGIN_NAME | LEX_NAME) /* Can have @'s inside labels.  */
