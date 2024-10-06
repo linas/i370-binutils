@@ -1485,6 +1485,9 @@ bool i370_align_label(void)
   /* Look for EQU followed by stuff. Ignore it. Issue the
      the label anyway. Doing this only because I don't know
      what the EQU is supposed to do. */
+  /* Probably thei right thing to do is what s_set() in read.c
+     does. To get the symbol name, use `line_start` which is
+     char * and is defined when thus routie gets called. */
   if (0 == strncmp(input_line_pointer+1, "EQU", 3))
     {
       if (strncmp(input_line_pointer+4, " *", 2))
