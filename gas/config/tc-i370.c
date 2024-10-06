@@ -2066,10 +2066,8 @@ i370_addr_offset (expressionS *exx)
   while (*lab && (',' != *lab) && ('(' != *lab))
     {
       if (ISDIGIT (*lab))
-	{
-	  all_digits = 1;
-	}
-      else if (ISALPHA (*lab) || '_' == *lab)
+	all_digits = 1;
+      else if (ISALPHA (*lab) || '_' == *lab || '@' == *lab)
 	{
 	  if (!all_digits)
 	    {
