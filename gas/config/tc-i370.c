@@ -1979,7 +1979,7 @@ i370_addr_offset (expressionS *exx)
     {
       if (ISDIGIT (*lab))
 	all_digits = 1;
-      else if (ISALPHA (*lab) || '_' == *lab)
+      else if (ISALPHA (*lab) || '_' == *lab || '@' == *lab)
 	{
 	  if (!all_digits)
 	    {
