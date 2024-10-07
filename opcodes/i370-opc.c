@@ -84,7 +84,7 @@ const struct i370_operand i370_operands[] =
   /* The R2 register field in an RR form instruction.  */
 #define RR_R2 (RR_M1 + 1)
 #define RR_R2_MASK (0xf)
-  { 4, 0, 0, 0, I370_OPERAND_GPR, "RR R2" },
+  { 4, 0, 0, 0, I370_OPERAND_GPRLAST, "RR R2" },
 
   /* The I field in an RR form SVC-style instruction.  */
 #define RR_I (RR_R2 + 1)
@@ -99,7 +99,7 @@ const struct i370_operand i370_operands[] =
   /* The R2 register field in an RRE form instruction.  */
 #define RRE_R2 (RRE_R1 + 1)
 #define RRE_R2_MASK (0xf)
-  { 4, 0, 0, 0, I370_OPERAND_GPR, "RRE R2" },
+  { 4, 0, 0, 0, I370_OPERAND_GPRLAST, "RRE R2" },
 
   /* The R1 register field in an RRF form instruction.  */
 #define RRF_R1 (RRE_R2 + 1)
@@ -114,7 +114,7 @@ const struct i370_operand i370_operands[] =
   /* The R3 register field in an RRF form instruction.  */
 #define RRF_R3 (RRF_R2 + 1)
 #define RRF_R3_MASK (0xf << 12)
-  { 4, 12, 0, 0, I370_OPERAND_GPR, "RRF R3" },
+  { 4, 12, 0, 0, I370_OPERAND_GPRLAST, "RRF R3" },
 
   /* The R1 register field in an RX or RS form instruction.  */
 #define RX_R1 (RRF_R3 + 1)

@@ -153,6 +153,8 @@ print_insn_i370 (memaddr, info)
             (*info->fprintf_func) (info->stream, "r%ld)", value);
           else if ((operand->flags & I370_OPERAND_GPR) != 0)
             (*info->fprintf_func) (info->stream, "r%ld,", value);
+          else if ((operand->flags & I370_OPERAND_GPRLAST) != 0)
+            (*info->fprintf_func) (info->stream, "r%ld", value);
           else if ((operand->flags & I370_OPERAND_FPR) != 0)
             (*info->fprintf_func) (info->stream, "f%ld,", value);
           else if ((operand->flags & I370_OPERAND_RELATIVE) != 0)
