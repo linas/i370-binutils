@@ -39,6 +39,11 @@ print_insn_i370 (memaddr, info)
   i370_insn_t insn;
   const struct i370_opcode *opcode;
   const struct i370_opcode *opcode_end;
+  int prthex=0;
+
+  /* User can request hex printing with -Mx flag on objdump */
+  if (info->disassembler_options && 'x' == info->disassembler_options[0])
+    prthex = 1;
 
   /* Avoid truncating the last insn. If the last insn is (for example)
    * BASR r1,r14, its of length two, and the read of 6 bytes will
@@ -146,9 +151,8 @@ print_insn_i370 (memaddr, info)
                 (*info->fprintf_func) (info->stream, "(,");
             }
           else if ((operand->flags & I370_OPERAND_LENGTH) != 0)
-            {
-              (*info->fprintf_func) (info->stream, "(%ld,", value);
-            }
+            (*info->fprintf_func) (info->stream,
+                prthex ? "(0x%lx," : "(%ld,", value);
           else if ((operand->flags & I370_OPERAND_BASE) != 0)
             (*info->fprintf_func) (info->stream, "r%ld)", value);
           else if ((operand->flags & I370_OPERAND_GPR) != 0)
@@ -158,7 +162,8 @@ print_insn_i370 (memaddr, info)
           else if ((operand->flags & I370_OPERAND_FPR) != 0)
             (*info->fprintf_func) (info->stream, "f%ld,", value);
           else if ((operand->flags & I370_OPERAND_RELATIVE) != 0)
-            (*info->fprintf_func) (info->stream, "%ld", value);
+            (*info->fprintf_func) (info->stream, 
+                prthex ? "0x%lx" : "%ld", value);
           else if ((operand->flags & I370_OPERAND_MASK) != 0)
             (*info->fprintf_func) (info->stream, "%ld,", value);
           else
