@@ -56,7 +56,7 @@ static long extract_rxf_r3 PARAMS (( i370_insn_t, int *));
                       if absent, should take value of zero
    I370_OPERAND_INDEX index register; if present, must name a register
                       if absent, should take value of zero
-   I370_OPERAND_OPTIONAL other optional operand (usuall reg?)
+   I370_OPERAND_OPTIONAL other optional operand (usually a reg?).
 
    Many of the operands describe the same field, such as RX_R1, RI_R1,
    RIL_R1, RXE_R1, RS_R1, RSI_R1, but are given distinct definitions
@@ -239,7 +239,7 @@ const struct i370_operand i370_operands[] =
  /* The B1 base register field in an SS form instruction.  */
 #define SS_B1 (SS_L + 1)
 #define SS_B1_MASK (0xf << 12)
-  { 4, 12, 0, 0, I370_OPERAND_GPR, "SS B1" },
+  { 4, 12, 0, 0, I370_OPERAND_SS_B1, "SS B1" },
 
   /* The D1 displacement field in an SS form instruction.  */
 #define SS_D1 (SS_B1 + 1)

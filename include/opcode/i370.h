@@ -251,9 +251,13 @@ extern const struct i370_operand i370_operands[];
    Printed as an integer.  Example: BC 15,12(,r15)  */
 #define I370_OPERAND_MASK (0x100)
 
-/* This operand is a register, appearing last in a list. Printed witout
+/* This operand is a register, appearing last in a list. Printed without
    a comma.  Example: basr    r14,r15  */
 #define I370_OPERAND_GPRLAST (0x200)
+
+/* This operand is the SS form B1 register. Printed with trailing paren
+   and a comma.  Example: mvc 88(3,r11),672(r3)  */
+#define I370_OPERAND_SS_B1 (0x400)
 
 
 /* Define some misc macros.  We keep them with the operands table
