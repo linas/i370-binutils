@@ -167,12 +167,12 @@ print_insn_i370 (memaddr, info)
         }
 
       return opcode->len;
-
     }
 
+  /* We could not find a match. Print 4 bytes; this is probably part
+     of the new function prolog, which holds 4-byte addrs. */
+  (*info->fprintf_func) (info->stream, ".long\t0x%02x%02x%02x%02x",
+                        buffer[0], buffer[1], buffer[2], buffer[3]);
 
-  /* We could not find a match.  */
-  (*info->fprintf_func) (info->stream, ".short 0x%02x%02x", buffer[0], buffer[1]);
-
-  return 2;
+  return 4;
 }
