@@ -2507,7 +2507,7 @@ md_assemble (char *str)
   /* Perform some off-by-one hacks on the length field of certain instructions.
      It's such a shame to have to do this, but the problem is that HLASM got
      defined so that the lengths differ by one from the actual machine instructions.
-     this code should probably be moved to a special inter-operand routine.
+     This code should probably be moved to a special inter-operand routine.
      Sigh. Affected instructions are Compare Logical, Move and Exclusive OR
      hack alert -- aren't *all* SS instructions affected ??  */
   off_by_one = 0;
