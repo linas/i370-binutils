@@ -99,6 +99,7 @@ extract_ril_i2 (i370_insn_t insn, int *invalid ATTRIBUTE_UNUSED)
    The fields are bits, shift, insert, extract, flags, name.
    The types:
    I370_OPERAND_GPR register, must name a register, must be present
+   I370_OPERAND_MASK 4-bit binary mask, must be present
    I370_OPERAND_RELATIVE displacement or length field, must be present
    I370_OPERAND_BASE base register; if present, must name a register
                       if absent, should take value of zero
@@ -124,8 +125,13 @@ const struct i370_operand i370_operands[] =
 #define RR_R1_MASK (0xf << 4)
   { 4, 4, 0, 0, I370_OPERAND_GPR, "RR R1" },
 
+  /* The M1 mask field in an RR form instruction.  */
+#define RR_M1 (RR_R1 + 1)
+#define RR_M1_MASK (0xf << 4)
+  { 4, 4, 0, 0, I370_OPERAND_MASK, "RR M1" },
+
   /* The R2 register field in an RR form instruction.  */
-#define RR_R2 (RR_R1 + 1)
+#define RR_R2 (RR_M1 + 1)
 #define RR_R2_MASK (0xf)
   { 4, 0, 0, 0, I370_OPERAND_GPR, "RR R2" },
 
@@ -164,8 +170,13 @@ const struct i370_operand i370_operands[] =
 #define RX_R1_MASK (0xf << 20)
   { 4, 20, 0, 0, I370_OPERAND_GPR, "RX R1" },
 
+  /* The M1 mask field in the BC RX form instruction.  */
+#define RX_M1 (RX_R1 + 1)
+#define RX_M1_MASK (0xf << 20)
+  { 4, 20, 0, 0, I370_OPERAND_MASK, "RX M1" },
+
   /* The X2 index field in an RX form instruction.  */
-#define RX_X2 (RX_R1 + 1)
+#define RX_X2 (RX_M1 + 1)
 #define RX_X2_MASK (0xf << 16)
   { 4, 16, 0, 0, I370_OPERAND_GPR | I370_OPERAND_INDEX, "RX X2"},
 
@@ -225,8 +236,13 @@ const struct i370_operand i370_operands[] =
 #define RI_R1_MASK (0xf << 20)
   { 4, 20, 0, 0, I370_OPERAND_GPR, "RI R1" },
 
+  /* The M1 mask field in the BRC RI form instruction.  */
+#define RI_M1 (RI_R1 + 1)
+#define RI_M1_MASK (0xf << 20)
+  { 4, 20, 0, 0, I370_OPERAND_MASK, "RI M1" },
+
   /* The I2 immediate field in an RI form instruction.  */
-#define RI_I2 (RI_R1 + 1)
+#define RI_I2 (RI_M1 + 1)
 #define RI_I2_MASK (0xffff)
   { 16, 0, 0, 0, I370_OPERAND_RELATIVE, "RI I2" },
 
@@ -577,7 +593,7 @@ const struct i370_opcode i370_opcodes[] =
 { "basr",   2, {{RR(0x0d,0,0), 0}}, {{RR_MASK, 0}}, IXA,   {RR_R1, RR_R2} },
 { "bassm",  2, {{RR(0x0c,0,0), 0}}, {{RR_MASK, 0}}, IXA,   {RR_R1, RR_R2} },
 { "bsm",    2, {{RR(0x0b,0,0), 0}}, {{RR_MASK, 0}}, IXA,   {RR_R1, RR_R2} },
-{ "bcr",    2, {{RR(0x07,0,0), 0}}, {{RR_MASK, 0}}, I370,  {RR_R1, RR_R2} },
+{ "bcr",    2, {{RR(0x07,0,0), 0}}, {{RR_MASK, 0}}, I370,  {RR_M1, RR_R2} },
 { "bctr",   2, {{RR(0x06,0,0), 0}}, {{RR_MASK, 0}}, I370,  {RR_R1, RR_R2} },
 { "cdr",    2, {{RR(0x29,0,0), 0}}, {{RR_MASK, 0}}, I370,  {RR_R1, RR_R2} },
 { "cer",    2, {{RR(0x39,0,0), 0}}, {{RR_MASK, 0}}, I370,  {RR_R1, RR_R2} },
@@ -820,7 +836,7 @@ const struct i370_opcode i370_opcodes[] =
 { "aw",     4, {{RX(0x6e,0,0,0,0),  0}}, {{RX_MASK,  0}}, I370, {RX_R1, RX_D2, RX_X2, RX_B2} },
 { "bal",    4, {{RX(0x45,0,0,0,0),  0}}, {{RX_MASK,  0}}, I370, {RX_R1, RX_D2, RX_X2, RX_B2} },
 { "bas",    4, {{RX(0x4d,0,0,0,0),  0}}, {{RX_MASK,  0}}, IXA,  {RX_R1, RX_D2, RX_X2, RX_B2} },
-{ "bc",     4, {{RX(0x47,0,0,0,0),  0}}, {{RX_MASK,  0}}, I370, {RX_R1, RX_D2, RX_X2, RX_B2} },
+{ "bc",     4, {{RX(0x47,0,0,0,0),  0}}, {{RX_MASK,  0}}, I370, {RX_M1, RX_D2, RX_X2, RX_B2} },
 { "bct",    4, {{RX(0x46,0,0,0,0),  0}}, {{RX_MASK,  0}}, I370, {RX_R1, RX_D2, RX_X2, RX_B2} },
 { "c",      4, {{RX(0x59,0,0,0,0),  0}}, {{RX_MASK,  0}}, I370, {RX_R1, RX_D2, RX_X2, RX_B2} },
 { "cd",     4, {{RX(0x69,0,0,0,0),  0}}, {{RX_MASK,  0}}, I370, {RX_R1, RX_D2, RX_X2, RX_B2} },
@@ -983,7 +999,7 @@ const struct i370_opcode i370_opcodes[] =
 { "aghi",   4, {{RI(0xa7b,0,0),    0}}, {{RI_MASK,  0}}, IZN,  {RI_R1, RI_I2} },
 { "ahi",    4, {{RI(0xa7a,0,0),    0}}, {{RI_MASK,  0}}, IIR,  {RI_R1, RI_I2} },
 { "bras",   4, {{RI(0xa75,0,0),    0}}, {{RI_MASK,  0}}, IIR,  {RI_R1, RI_I2} },
-{ "brc",    4, {{RI(0xa74,0,0),    0}}, {{RI_MASK,  0}}, IIR,  {RI_R1, RI_I2} },
+{ "brc",    4, {{RI(0xa74,0,0),    0}}, {{RI_MASK,  0}}, IIR,  {RI_M1, RI_I2} },
 { "brct",   4, {{RI(0xa76,0,0),    0}}, {{RI_MASK,  0}}, IIR,  {RI_R1, RI_I2} },
 { "brctg",  4, {{RI(0xa77,0,0),    0}}, {{RI_MASK,  0}}, IZN,  {RI_R1, RI_I2} },
 { "cghi",   4, {{RI(0xa7f,0,0),    0}}, {{RI_MASK,  0}}, IZN,  {RI_R1, RI_I2} },

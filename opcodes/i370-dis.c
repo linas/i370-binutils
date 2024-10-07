@@ -155,6 +155,8 @@ print_insn_i370 (bfd_vma memaddr, struct disassemble_info *info)
             (*info->fprintf_func) (info->stream, "f%ld,", value);
           else if ((operand->flags & I370_OPERAND_RELATIVE) != 0)
             (*info->fprintf_func) (info->stream, "%ld", value);
+          else if ((operand->flags & I370_OPERAND_MASK) != 0)
+            (*info->fprintf_func) (info->stream, "%ld,", value);
           else
             (*info->fprintf_func) (info->stream, " %ld, ", value);
         }
