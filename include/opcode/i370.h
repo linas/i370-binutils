@@ -248,6 +248,10 @@ extern const struct i370_operand i370_operands[];
    print this operand out only if it is not zero.  */
 #define I370_OPERAND_OPTIONAL (0x80)
 
+/* This operand is a 4-bit mask, used for branch compares.
+   Printed as an integer.  Example: BC 15,12(,r15)  */
+#define I370_OPERAND_MASK (0x100)
+
 
 /* Define some misc macros.  We keep them with the operands table
    for simplicity.  The macro table is an array of struct i370_macro.  */
