@@ -1532,10 +1532,8 @@ bool i370_align_label(char * line_start)
       input_line_pointer += 4;
       while (ISSPACE (*input_line_pointer)) input_line_pointer++;
       if ('*' == *input_line_pointer)
-	{
-	  input_line_pointer ++;
-	  return true;
-	}
+	return true;
+
       do_equ(line_start);
       return false;
     }
