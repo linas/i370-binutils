@@ -2631,7 +2631,7 @@ md_assemble (char *str)
           fixups[fc].reloc = reloc;
           ++fc;
         }
-#endif /* OBJ_ELF */
+#endif /* OBJ_ELF_SUFFIX */
       else
         {
           /* We need to generate a fixup for this expression.  */
@@ -2687,9 +2687,15 @@ md_assemble (char *str)
      md_apply_fix.  */
   for (i = 0; i < fc; i++)
     {
-      /* const struct i370_operand *operand;
-	 operand = &i370_operands[fixups[i].opindex]; */
-      if (fixups[i].reloc != BFD_RELOC_UNUSED)
+      if (fixups[i].reloc == BFD_RELOC_UNUSED)
+	{
+	  fix_new_exp (frag_now, f - frag_now->fr_literal, opcode->len,
+		       &fixups[i].xexp, 0,
+		       ((bfd_reloc_code_real_type)
+			(fixups[i].opindex + (int) BFD_RELOC_UNUSED)));
+	}
+#ifdef OBJ_ELF_SUFFIX
+      else
 	{
 	  reloc_howto_type *reloc_howto = bfd_reloc_type_lookup (stdoutput, fixups[i].reloc);
 	  int size;
@@ -2722,13 +2728,7 @@ md_assemble (char *str)
 	      break;
 	    }
 	}
-      else
-	{
-	  fix_new_exp (frag_now, f - frag_now->fr_literal, opcode->len,
-		       &fixups[i].xexp, 0,
-		       ((bfd_reloc_code_real_type)
-			(fixups[i].opindex + (int) BFD_RELOC_UNUSED)));
-	}
+#endif /* OBJ_ELF_SUFFIX */
     }
 }
 
