@@ -150,21 +150,22 @@ const pseudo_typeS md_pseudo_table[] =
   /* Enable ebcdic strings e.g. for 3270 support. */
   { "ebcdic",   i370_ebcdic,	1 },
 
-#ifdef OBJ_ELF
+#ifdef OBJ_ELF_SUFFIX
   { "long",     i370_elf_cons,	4 },
   { "word",     i370_elf_cons,	4 },
   { "short",    i370_elf_cons,	2 },
+#endif
+
+#ifdef OBJ_ELF
+  /* Override {"word", cons, 2} in read.c */
+  { "word",     cons,		4 },
   { "rdata",    i370_elf_rdata,	0 },
   { "rodata",   i370_elf_rdata,	0 },
   { "lcomm",    i370_elf_lcomm,	0 },
 
-  /* These are used for dwarf.  */
-  { "2byte",    i370_elf_cons,   2 },
-  { "4byte",    i370_elf_cons,   4 },
-  { "8byte",    i370_elf_cons,  8 },
   /* These are used for dwarf2.  */
-  { "file",     (void (*) PARAMS ((int))) dwarf2_directive_file, 0},
-  { "loc",      dwarf2_directive_loc, 0},
+  { "file",     (void (*) (int)) dwarf2_directive_file, 0 },
+  { "loc",      dwarf2_directive_loc, 0 },
 #endif
 
   /* This pseudo-op is used even when not generating XCOFF output.  */
@@ -752,7 +753,7 @@ i370_insert_operand (insn, operand, val)
 }
 
 
-#ifdef OBJ_ELF
+#ifdef OBJ_ELF_SUFFIX
 /* Parse @got, etc. and return the desired relocation.
    Currently, i370 does not support (don't really need to support) any
    of these fancier markups ... for example, no one is going to
@@ -890,6 +891,9 @@ i370_elf_cons (nbytes)
   input_line_pointer--;        	/* Put terminator back into stream.  */
   demand_empty_rest_of_line ();
 }
+#endif /* OBJ_ELF_SUFFIX */
+
+#ifdef OBJ_ELF
 
 
 /* ASCII to EBCDIC conversion table.  */
@@ -2462,7 +2466,7 @@ md_assemble (str)
   int fc;
   char *f;
   int i;
-#ifdef OBJ_ELF
+#ifdef OBJ_ELF_SUFFIX
   bfd_reloc_code_real_type reloc;
 #endif
 
@@ -2699,7 +2703,7 @@ md_assemble (str)
         }
       else if (ex.X_op == O_constant)
         {
-#ifdef OBJ_ELF
+#ifdef OBJ_ELF_SUFFIX
           /* Allow @HA, @L, @H on constants.
            * Well actually, no we don't; there really don't make sense
            * (at least not to me) for the i370.  However, this code is
@@ -2734,7 +2738,7 @@ md_assemble (str)
 #endif
           insn = i370_insert_operand (insn, operand, ex.X_add_number);
         }
-#ifdef OBJ_ELF
+#ifdef OBJ_ELF_SUFFIX
       else if ((reloc = i370_elf_suffix (&str, &ex)) != BFD_RELOC_UNUSED)
         {
           as_tsktsk ("md_assemble(): suffixed relocations not supported\n");
