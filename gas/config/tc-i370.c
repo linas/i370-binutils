@@ -2757,9 +2757,8 @@ md_assemble (str)
         {
           /* We need to generate a fixup for this expression.  */
           /* Typically, the expression will just be a symbol ...
-           * printf ("insn %s needs fixup for %s \n",
-           *        opcode->name, ex.X_add_symbol->bsym->name);
-           */
+             printf ("insn %s needs fixup for %s \n",
+                     opcode->name, S_GET_NAME(ex.X_add_symbol));  */
 
           if (fc >= MAX_INSN_FIXUPS)
             as_fatal ("too many fixups");
@@ -3219,7 +3218,7 @@ md_apply_fix3 (fixP, valP, seg)
   if (fixP->fx_addsy != NULL)
     {
 #ifdef DEBUG
-      printf ("\nmd_apply_fix3: symbol %s at 0x%x (%s:%d) val=0x%x addend=0x%x\n",
+      printf ("\nmd_apply_fix3: symbol %s at 0x%lx (%s:%d) val=0x%lx addend=0x%lx\n",
 	      S_GET_NAME (fixP->fx_addsy),
 	      fixP->fx_frag->fr_address + fixP->fx_where,
 	      fixP->fx_file, fixP->fx_line,
@@ -3244,7 +3243,7 @@ md_apply_fix3 (fixP, valP, seg)
       operand = &i370_operands[opindex];
 
 #ifdef DEBUG
-      printf ("\nmd_apply_fix3: fixup operand %s at 0x%x in %s:%d addend=0x%x\n",
+      printf ("\nmd_apply_fix3: fixup operand %s at 0x%lx in %s:%d addend=0x%lx\n",
 	      operand->name,
 	      fixP->fx_frag->fr_address + fixP->fx_where,
 	      fixP->fx_file, fixP->fx_line,
@@ -3273,6 +3272,7 @@ md_apply_fix3 (fixP, valP, seg)
 	/* Nothing else to do here.  */
 	return;
 
+#if UNFINISHED_WORK
       /* Determine a BFD reloc value based on the operand information.
 	 We are only prepared to turn a few of the operands into
 	 relocs.  In fact, we support *zero* operand relocations ...
@@ -3301,6 +3301,7 @@ md_apply_fix3 (fixP, valP, seg)
           fixP->fx_done = 1;
           return;
         }
+#endif /* UNFINISHED_WORK */
     }
   else
     {
@@ -3313,7 +3314,7 @@ md_apply_fix3 (fixP, valP, seg)
 #ifdef DEBUG
       printf ("md_apply_fix3: reloc case %d in segment  %s %s:%d\n",
 	      fixP->fx_r_type, segment_name (seg), fixP->fx_file, fixP->fx_line);
-      printf ("\tcurrent fixup value is 0x%x \n", value);
+      printf ("\tcurrent fixup value is 0x%lx \n", value);
 #endif
       switch (fixP->fx_r_type)
         {
@@ -3327,7 +3328,7 @@ md_apply_fix3 (fixP, valP, seg)
         case BFD_RELOC_32_PCREL:
         case BFD_RELOC_32_BASEREL:
 #ifdef DEBUG
-          printf ("\t32 bit relocation at 0x%x\n",
+          printf ("\t32 bit relocation at 0x%lx\n",
 		  fixP->fx_frag->fr_address + fixP->fx_where);
 #endif
           md_number_to_chars (fixP->fx_frag->fr_literal + fixP->fx_where,
@@ -3408,8 +3409,8 @@ tc_gen_reloc (seg, fixp)
   reloc->addend = fixp->fx_addnumber;
 
 #ifdef DEBUG
-  printf ("\ngen_reloc(): sym %s (%s:%d) at addr 0x%x addend=0x%x\n",
-	  fixp->fx_addsy->bsym->name,
+  printf ("\ngen_reloc(): sym %s (%s:%d) at addr 0x%lx addend=0x%lx\n",
+	  S_GET_NAME(fixp->fx_addsy),
 	  fixp->fx_file, fixp->fx_line,
 	  reloc->address, reloc->addend);
 #endif
