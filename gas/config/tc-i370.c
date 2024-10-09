@@ -1020,9 +1020,10 @@ unsigned char ebcasc[256] =
 
 /* EBCDIC translation tables needed for 3270 support.  */
 static void
-i370_ebcdic (int do_convert)
+i370_rebcdic (int do_convert, int nrepeat)
 {
-  char *p, *end;
+  int i;
+  char *p, *ps, *end;
   char delim = 0;
   size_t nbytes;
 
@@ -1035,7 +1036,8 @@ i370_ebcdic (int do_convert)
   *end = '\0';
   nbytes = end - input_line_pointer;
 
-  p = frag_more (nbytes);
+  p = frag_more (nbytes * nrepeat);
+  ps = p;
   while (end > input_line_pointer)
     {
       if (do_convert)
@@ -1045,8 +1047,20 @@ i370_ebcdic (int do_convert)
 
       ++p; ++input_line_pointer;
     }
-
   ++input_line_pointer;
+
+  /* Now, repeat, if needed */
+  for (i=1; i<nrepeat; i++)
+    {
+      memcpy(p, ps, nbytes);
+      p += nbytes;
+    }
+}
+
+static void
+i370_ebcdic (int do_convert)
+{
+  i370_rebcdic(do_convert, 1);
 }
 
 
@@ -1428,14 +1442,17 @@ i370_dc_align (char type)
 /* DC Define Const.
    For sample code on handling other constants, look at i370_elf_cons()
 
-   This code handles pseudoops of the style
+   This code handles pseudo-ops of the style
    DC   D'3.141592653'   # in sysv4, .double 3.14159265
    DC   F'1'             # in sysv4, .long   1.
    DC   X'FOOD'          # hexadecimal, length 2
    DC   XL4'FOOD'        # hexadecimal, length 4
+   DC   472X'OO'         # hexadecimal, length 472
 
-   The above examples get aligned to 4byte boundaries, except
-   for DC   X'FOOD'  which would be on a 2-byte boundary.
+   The D and F types get aligned to 4 byte boundaries. H gets aligned
+   to 2-byte boundaries. The X-types are not aligned, as they are
+   often used for strings.  Those with a repeat count get aligned
+   on a boundary suitable for the repeated type.
  */
 static void
 i370_dc (unused)
@@ -1445,11 +1462,24 @@ i370_dc (unused)
   int nbytes;
   char type;
   char *p;
+  char *rpeat;
+  int i, npeat = 1;
 
   if (is_it_end_of_statement ())
     {
       demand_empty_rest_of_line ();
       return;
+    }
+
+  /* Look for a repeat count */
+  rpeat = input_line_pointer;
+  while (ISNUM(*input_line_pointer)) input_line_pointer++;
+  if (rpeat != input_line_pointer)
+    {
+      type = *input_line_pointer;
+      *input_line_pointer = 0;
+      npeat = atoi(rpeat);
+      *input_line_pointer = type;
     }
 
   type = *input_line_pointer;
@@ -1458,9 +1488,9 @@ i370_dc (unused)
       ++input_line_pointer;
 
       if (i370_convert_dc_to_ebcdic)
-	i370_ebcdic(1);
+	i370_rebcdic(1, npeat);
       else
-	i370_ebcdic(0);
+	i370_rebcdic(0, npeat);
       return;
     }
 
@@ -1473,23 +1503,27 @@ i370_dc (unused)
     case 'A':  /* Address of label */
     case 'V':  /* External Address */
       /* Address constants are of length 4 */
-      emit_expr (&xexp, 4);
+      for (i=0; i<npeat; i++) emit_expr (&xexp, 4);
       break;
 
     case 'B':  /* binary bitstring */
     case 'H':  /* 16-bit decimal */
     case 'F':  /* 32-bit decimal */
     case 'X':  /* variable length hex */
-      emit_expr (&xexp, nbytes);
+      for (i=0; i<npeat; i++) emit_expr (&xexp, nbytes);
       break;
 
     case 'E':  /* 32-bit float */
     case 'D':  /* 64-bit double */
     case 'L':  /* 128-bit long double */
-      p = frag_more (nbytes);
+      p = frag_more (nbytes * npeat);
 
-      /* XXX I'm not sure this is right ...? */
-      memcpy (p, generic_bignum, nbytes);
+      for (i=0; i<npeat; i++)
+	{
+	  /* XXX I'm not sure this is right ...? */
+	  memcpy (p, generic_bignum, nbytes);
+	  p += nbytes;
+	}
       break;
 
     default:
