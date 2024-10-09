@@ -1228,7 +1228,7 @@ i370_parse_const (expressionS *xexp)
 	  {
 	    LITTLENUM_TYPE fltnum[BIGNUM_CACHE];
 	    xexp->X_add_number = cons_len / CHARS_PER_LITTLENUM;
-  
+
 	    /* Convert generic_floating_point_number to bignum.
 	     * The add_to_lit_pool will cache this, for later playback. */
 	    if ('E' == name[0]) /* 32-bit float */
@@ -1239,7 +1239,7 @@ i370_parse_const (expressionS *xexp)
 		  gen_to_decfloat_words(fltnum, name[0]);
 	        else /* Assume "Floating Point Hex" aka old-style IBM */
 		  gen_to_hexfloat_words(fltnum, name[0]);
-  
+
 	        generic_bignum[0] = fltnum[1];
 	        generic_bignum[1] = fltnum[0];
 	      }
@@ -1251,7 +1251,7 @@ i370_parse_const (expressionS *xexp)
 		  gen_to_decfloat_words(fltnum, name[0]);
 	        else /* Assume "Floating Point Hex" aka old-style IBM */
 		  gen_to_hexfloat_words(fltnum, name[0]);
-  
+
 	        /* This is correct if host is LE, but what if host is BE? */
 	        generic_bignum[0] = fltnum[3];
 	        generic_bignum[1] = fltnum[2];
@@ -1266,7 +1266,7 @@ i370_parse_const (expressionS *xexp)
 		  gen_to_decfloat_words(fltnum, name[0]);
 	        else /* Assume "Floating Point Hex" aka old-style IBM */
 		  gen_to_hexfloat_words(fltnum, name[0]);
-  
+
 	        /* This is correct if host is LE, but what if host is BE? */
 	        generic_bignum[0] = fltnum[7];
 	        generic_bignum[1] = fltnum[6];
