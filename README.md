@@ -63,7 +63,8 @@ provides a C and C++ compiler that emits HLASM (see
 [here for the generators](https://github.com/open-watcom/open-watcom-v2/tree/master/bld/cg/s37/c).)
 
 Most notable is that this version of binutils creates only ELF objects
-and binaries.  Support for the XSD/ESD object format is absent.
+and binaries.  Support for the
+[ESD/XSD/GOFF](https://en.wikipedia.org/wiki/GOFF) object format is absent.
 
 The `-mhlasm` flag must be set run in the compatibility mode,
 i.e. to get labels wthout dots and trailing colons, to get working
