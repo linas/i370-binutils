@@ -257,8 +257,26 @@ extern const struct i370_operand i370_operands[];
 #define I370_OPERAND_GPRLAST (0x200)
 
 /* This operand is the SS form B1 register. Printed with trailing paren
-   and a comma.  Example: mvc 88(3,r11),672(r3)  */
+   and a comma.  Example: mvc 88(4,r11),672(r3)  */
 #define I370_OPERAND_SS_B1 (0x400)
+
+/* This operand is the SS-b form L1 length. Special printing...  */
+#define I370_OPERAND_SS_L1 (0x800)
+
+/* This operand is the SS-b form L2 length. Special printing...  */
+#define I370_OPERAND_SS_L2 (0x1000)
+
+/* This operand is the SS-d form R1 register. Printed with trailing
+   comma.  Example: mvck 88(r1,b11),672(b2),r3  */
+#define I370_OPERAND_SS_R1 (0x2000)
+
+/* This operand is the SS-d form R3 register. Printed with leading
+   comma.  Example: mvck 88(r1,b11),672(b2),r3  */
+#define I370_OPERAND_SS_R3 (0x4000)
+
+/* This operand is the SS-c form I3 immediate. like R3 above, but its
+   not a register.  */
+#define I370_OPERAND_SS_I3 (0x8000)
 
 
 /* Define some misc macros.  We keep them with the operands table

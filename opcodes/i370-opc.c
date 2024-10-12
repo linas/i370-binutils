@@ -280,13 +280,38 @@ const struct i370_operand i370_operands[] =
 #define S_D2_MASK (0xfff)
   { 12, 0, 0, 0, I370_OPERAND_RELATIVE, "S D2" },
 
-  /* The L length field in an SS form instruction.  */
+  /* The L length field in an SS-a form instruction.  */
 #define SS_L (S_D2 + 1)
 #define SS_L_MASK (0xffff<<16)
   { 8, 16, 0, 0, I370_OPERAND_RELATIVE | I370_OPERAND_LENGTH, "SS L" },
 
+  /* The L1 field for SS-b form instruction.  */
+#define SS_L1 (SS_L + 1)
+#define SS_L1_MASK (0xff<<20)
+  { 4, 20, 0, 0, I370_OPERAND_SS_L1 | I370_OPERAND_LENGTH, "SS-b L1" },
+
+  /* The L2 field for SS-b form instruction.  */
+#define SS_L2 (SS_L1 + 1)
+#define SS_L2_MASK (0xff<<16)
+  { 4, 16, 0, 0, I370_OPERAND_SS_L2 | I370_OPERAND_LENGTH, "SS-b L2" },
+
+  /* The R1 field for SS-d form instruction.  */
+#define SS_R1 (SS_L2 + 1)
+#define SS_R1_MASK (0xff<<20)
+  { 4, 20, 0, 0, I370_OPERAND_SS_R1 | I370_OPERAND_GPR, "SS-d R1" },
+
+  /* The R3 field for SS-d form instruction.  */
+#define SS_R3 (SS_R1 + 1)
+#define SS_R3_MASK (0xff<<16)
+  { 4, 16, 0, 0, I370_OPERAND_SS_R3 | I370_OPERAND_GPR, "SS-d R3" },
+
+  /* The I3 field for SS-c form instruction.  */
+#define SS_I3 (SS_R3 + 1)
+#define SS_I3_MASK (0xff<<16)
+  { 4, 16, 0, 0, I370_OPERAND_SS_I3, "SS-c I3" },
+
  /* The B1 base register field in an SS form instruction.  */
-#define SS_B1 (SS_L + 1)
+#define SS_B1 (SS_I3 + 1)
 #define SS_B1_MASK (0xf << 12)
   { 4, 12, 0, 0, I370_OPERAND_SS_B1 | I370_OPERAND_GPR, "SS B1" },
 
@@ -1115,32 +1140,32 @@ const struct i370_opcode i370_opcodes[] =
 { "tsch",   4, {{S(0xb235,0,0),    0}}, {{S_MASK,	 0}}, IXA,  {S_D2, S_B2} },
 
 /* SS form instructions.  */
-{ "ap",     6, {{SSH(0xfa,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
+{ "ap",     6, {{SSH(0xfa,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L1,SS_B1,SS_D2,SS_L2,SS_B2} },
 { "clc",    6, {{SSH(0xd5,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
-{ "cp",     6, {{SSH(0xf9,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
-{ "dp",     6, {{SSH(0xfd,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
+{ "cp",     6, {{SSH(0xf9,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L1,SS_B1,SS_D2,SS_L2,SS_B2} },
+{ "dp",     6, {{SSH(0xfd,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L1,SS_B1,SS_D2,SS_L2,SS_B2} },
 { "ed",     6, {{SSH(0xde,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
 { "edmk",   6, {{SSH(0xdf,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
 { "lmd",    6, {{SSH(0xef,0,0,0),  0}}, {{SS_MASK,  0}}, IZN, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
 { "mvc",    6, {{SSH(0xd2,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
 { "mvcin",  6, {{SSH(0xe8,0,0,0),  0}}, {{SS_MASK,  0}}, IMI,  {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
-{ "mvck",   6, {{SSH(0xd9,0,0,0),  0}}, {{SS_MASK,  0}}, IXA,  {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
-{ "mvcp",   6, {{SSH(0xda,0,0,0),  0}}, {{SS_MASK,  0}}, IXA,  {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
-{ "mvcs",   6, {{SSH(0xdb,0,0,0),  0}}, {{SS_MASK,  0}}, IXA,  {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
+{ "mvck",   6, {{SSH(0xd9,0,0,0),  0}}, {{SS_MASK,  0}}, IXA,  {SS_D1,SS_R1,SS_B1,SS_D2,SS_B2,SS_R3} },
+{ "mvcp",   6, {{SSH(0xda,0,0,0),  0}}, {{SS_MASK,  0}}, IXA,  {SS_D1,SS_R1,SS_B1,SS_D2,SS_B2,SS_R3} },
+{ "mvcs",   6, {{SSH(0xdb,0,0,0),  0}}, {{SS_MASK,  0}}, IXA,  {SS_D1,SS_R1,SS_B1,SS_D2,SS_B2,SS_R3} },
 { "mvn",    6, {{SSH(0xd1,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
-{ "mvo",    6, {{SSH(0xf1,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
+{ "mvo",    6, {{SSH(0xf1,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L1,SS_B1,SS_D2,SS_L2,SS_B2} },
 { "mvz",    6, {{SSH(0xd3,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
 { "nc",     6, {{SSH(0xd4,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
 { "oc",     6, {{SSH(0xd6,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
-{ "pack",   6, {{SSH(0xf2,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
-{ "plo",    6, {{SSH(0xee,0,0,0),  0}}, {{SS_MASK,  0}}, IPL,  {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
-{ "sp",     6, {{SSH(0xfb,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
-{ "srp",    6, {{SSH(0xf0,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
+{ "pack",   6, {{SSH(0xf2,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L1,SS_B1,SS_D2,SS_L2,SS_B2} },
+{ "plo",    6, {{SSH(0xee,0,0,0),  0}}, {{SS_MASK,  0}}, IPL,  {SS_R1,SS_D1,SS_B1,SS_R3,SS_D2,SS_B2} },
+{ "sp",     6, {{SSH(0xfb,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L1,SS_B1,SS_D2,SS_L2,SS_B2} },
+{ "srp",    6, {{SSH(0xf0,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L1,SS_B1,SS_D2,SS_B2,SS_I3} },
 { "tr",     6, {{SSH(0xdc,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
 { "trt",    6, {{SSH(0xdd,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
-{ "unpk",   6, {{SSH(0xf3,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
+{ "unpk",   6, {{SSH(0xf3,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L1,SS_B1,SS_D2,SS_L2,SS_B2} },
 { "xc",     6, {{SSH(0xd7,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
-{ "zap",    6, {{SSH(0xf8,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L,SS_B1,SS_D2,SS_B2} },
+{ "zap",    6, {{SSH(0xf8,0,0,0),  0}}, {{SS_MASK,  0}}, I370, {SS_D1,SS_L1,SS_B1,SS_D2,SS_L2,SS_B2} },
 
 /* SSE form instructions.  */
 { "lasp",   6, {{SSEH(0xe500,0,0), 0}}, {{SSE_MASK, 0}}, IXA,  {SS_D1, SS_B1, SS_D2, SS_B2} },
