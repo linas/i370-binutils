@@ -303,7 +303,7 @@ const struct i370_operand i370_operands[] =
   /* The R3 field for SS-d form instruction.  */
 #define SS_R3 (SS_R1 + 1)
 #define SS_R3_MASK (0xff<<16)
-  { 4, 16, 0, 0, I370_OPERAND_SS_R3 | I370_OPERAND_GPR, "SS-d R3" },
+  { 4, 16, 0, 0, I370_OPERAND_SS_R3 | I370_OPERAND_GPRLAST | I370_OPERAND_GPR, "SS-d R3" },
 
   /* The I3 field for SS-c form instruction.  */
 #define SS_I3 (SS_R3 + 1)
