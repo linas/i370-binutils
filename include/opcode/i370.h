@@ -259,10 +259,10 @@ extern const struct i370_operand i370_operands[];
    and a comma.  Example: mvc 88(4,r11),672(r3)  */
 #define I370_OPERAND_SS_B1 (0x400)
 
-/* This operand is the SS-b form L1 length. Special printing...  */
+/* This operand is the SS-b form L1 length. */
 #define I370_OPERAND_SS_L1 (0x800)
 
-/* This operand is the SS-b form L2 length. Special printing...  */
+/* This operand is the SS-b form L2 length. */
 #define I370_OPERAND_SS_L2 (0x1000)
 
 /* This operand is the SS-d form R1 register. Printed with trailing
