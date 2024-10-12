@@ -2387,7 +2387,6 @@ md_assemble (char *str)
   int have_optional_index, have_optional_basereg, have_optional_reg;
   int skip_optional_index, skip_optional_basereg, skip_optional_reg;
   int use_text=0, use_other=0;
-  int off_by_one;
   struct i370_fixup fixups[MAX_INSN_FIXUPS];
   int fc;
   char *f;
@@ -2494,25 +2493,6 @@ md_assemble (char *str)
 	}
     }
 
-  /* Perform some off-by-one hacks on the length field of certain instructions.
-     It's such a shame to have to do this, but the problem is that HLASM got
-     defined so that the lengths differ by one from the actual machine instructions.
-     This code should probably be moved to a special inter-operand routine.
-     Sigh. Affected instructions are Compare Logical, Move and Exclusive OR
-     hack alert -- aren't *all* SS instructions affected ??  */
-  off_by_one = 0;
-  if (0 == strcasecmp ("CLC", opcode->name)
-      || 0 == strcasecmp ("ED", opcode->name)
-      || 0 == strcasecmp ("EDMK", opcode->name)
-      || 0 == strcasecmp ("MVC", opcode->name)
-      || 0 == strcasecmp ("MVCIN", opcode->name)
-      || 0 == strcasecmp ("MVN", opcode->name)
-      || 0 == strcasecmp ("MVZ", opcode->name)
-      || 0 == strcasecmp ("NC", opcode->name)
-      || 0 == strcasecmp ("OC", opcode->name)
-      || 0 == strcasecmp ("XC", opcode->name))
-    off_by_one = 1;
-
   /* Gather the operands.  */
   fc = 0;
   for (opindex_ptr = opcode->operands; *opindex_ptr != 0; opindex_ptr++)
@@ -2600,11 +2580,10 @@ md_assemble (char *str)
       str = input_line_pointer;
       input_line_pointer = hold;
 
-      /* Perform some off-by-one hacks on the length field of certain instructions.
-         It's such a shame to have to do this, but the problem is that HLASM got
-         defined so that the programmer specifies a length that is one greater
-         than what the machine instruction wants.  Sigh.  */
-      if (off_by_one && (0 == strcasecmp ("SS L", operand->name)))
+      /* Length fields are one-based when printed, but are zero-based
+         in machine code. So e.g. Length 1 to 16 are machine encoded
+         zero to 15.  */
+      if (operand->flags & I370_OPERAND_LENGTH)
 	ex.X_add_number --;
 
       if (ex.X_op == O_illegal)

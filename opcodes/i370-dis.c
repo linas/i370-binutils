@@ -149,8 +149,10 @@ print_insn_i370 (bfd_vma memaddr, struct disassemble_info *info)
                 (*info->fprintf_func) (info->stream, "(,");
             }
           else if ((operand->flags & I370_OPERAND_LENGTH) != 0)
+            /* Length fields start with 1 when printed, but are zero
+               in the machine code. So, an off-by-one issue.  */
             (*info->fprintf_func) (info->stream,
-                prthex ? "(0x%lx," : "(%ld,", value);
+                prthex ? "(0x%lx," : "(%ld,", value+1);
           else if ((operand->flags & I370_OPERAND_BASE) != 0)
             (*info->fprintf_func) (info->stream, "r%ld)", value);
           else if ((operand->flags & I370_OPERAND_GPRLAST) != 0)
