@@ -142,6 +142,8 @@ print_insn_i370 (memaddr, info)
           else if ((operand->flags & I370_OPERAND_SBASE) != 0)
             {
               (*info->fprintf_func) (info->stream, "(r%ld)", value);
+              if (*(opindex+1))
+                (*info->fprintf_func) (info->stream, ",");
             }
           else if ((operand->flags & I370_OPERAND_INDEX) != 0)
             {
