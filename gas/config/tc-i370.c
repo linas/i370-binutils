@@ -2980,8 +2980,15 @@ md_apply_fix (fixS *fixP, valueT * valP, segT seg ATTRIBUTE_UNUSED)
       char *where;
       i370_insn_t insn;
 
-      opindex = (int) fixP->fx_r_type - (int) BFD_RELOC_UNUSED;
+      if (fixP->fx_addsy != NULL)
+      {
+	as_bad(_("Fixups to undefined operands are not allowed: %s"),
+		S_GET_NAME(fixP->fx_addsy));
+	fixP->fx_done = 1;
+	return;
+      }
 
+      opindex = (int) fixP->fx_r_type - (int) BFD_RELOC_UNUSED;
       operand = &i370_operands[opindex];
 
 #ifdef DEBUG
