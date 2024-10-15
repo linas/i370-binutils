@@ -263,7 +263,7 @@ const struct i370_operand i370_operands[] =
  /* The B1 base register field in an SI form instruction.  */
 #define SI_B1 (SI_I2 + 1)
 #define SI_B1_MASK (0xf << 12)
-  { 4, 12, 0, 0, I370_OPERAND_GPR, "SI B1" },
+  { 4, 12, 0, 0, I370_OPERAND_GPR | I370_OPERAND_SBASE, "SI B1" },
 
   /* The D1 displacement field in an SI form instruction.  */
 #define SI_D1 (SI_B1 + 1)
