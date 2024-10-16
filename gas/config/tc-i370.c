@@ -2956,6 +2956,15 @@ md_apply_fix (fixS *fixP, valueT * valP, segT seg ATTRIBUTE_UNUSED)
 
   if (fixP->fx_addsy == NULL)
     fixP->fx_done = 1;
+  else if ((int) fixP->fx_r_type >= (int) BFD_RELOC_UNUSED)
+    {
+      as_bad(_("Fixup of undefined symbol %s at 0x%lx (%s:%d) not allowed"),
+	    S_GET_NAME (fixP->fx_addsy),
+	    fixP->fx_frag->fr_address + fixP->fx_where,
+	    fixP->fx_file, fixP->fx_line);
+      fixP->fx_done = 1;
+      return;
+    }
 
 #ifdef DEBUG
   else
@@ -2979,16 +2988,6 @@ md_apply_fix (fixS *fixP, valueT * valP, segT seg ATTRIBUTE_UNUSED)
       const struct i370_operand *operand;
       char *where;
       i370_insn_t insn;
-
-      if (fixP->fx_addsy != NULL)
-      {
-	as_bad(_("Fixup of undefined symbol %s at 0x%lx (%s:%d) not allowed"),
-	      S_GET_NAME (fixP->fx_addsy),
-	      fixP->fx_frag->fr_address + fixP->fx_where,
-	      fixP->fx_file, fixP->fx_line);
-	fixP->fx_done = 1;
-	return;
-      }
 
       opindex = (int) fixP->fx_r_type - (int) BFD_RELOC_UNUSED;
       operand = &i370_operands[opindex];
