@@ -3249,8 +3249,10 @@ md_apply_fix3 (fixP, valP, seg)
 
       if (fixP->fx_addsy != NULL)
       {
-	as_bad(_("Fixups to undefined operands are not allowed: %s"),
-		S_GET_NAME(fixP->fx_addsy));
+	as_bad(_("Fixup of undefined symbol %s at 0x%lx (%s:%d) not allowed"),
+	      S_GET_NAME (fixP->fx_addsy),
+	      fixP->fx_frag->fr_address + fixP->fx_where,
+	      fixP->fx_file, fixP->fx_line);
 	fixP->fx_done = 1;
 	return;
       }
