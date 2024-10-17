@@ -1088,13 +1088,6 @@ gen_to_hexfloat_words (LITTLENUM_TYPE *words, int type)
 {
   memset(words, 0, BIGNUM_CACHE * sizeof(LITTLENUM_TYPE));
 
-  /* Sign bits other than +/- are NaN and inf and qNaN and so on.
-     See struct FLONUM_STRUCT for details. */
-  if ('-' == generic_floating_point_number.sign)
-    words[0] = 0x8000;
-  else if ('+' != generic_floating_point_number.sign)
-    as_bad("unhandled sign value in float point");
-
   /* The below is incorrect, but vaguely approximate for
      the IBM hex format. It generates 8-bit exponents and
      24 or 56-bit mantissas.
@@ -1107,6 +1100,11 @@ gen_to_hexfloat_words (LITTLENUM_TYPE *words, int type)
   else if ('D' == type)
     {
       gen_to_words(words, 4, 8);
+    }
+  else if ('L' == type)
+    {
+      as_bad("long double precision not supported");
+      // gen_to_words(words, 4, 8);
     }
 }
 
