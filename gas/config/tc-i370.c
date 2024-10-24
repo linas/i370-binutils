@@ -2970,12 +2970,20 @@ md_apply_fix (fixS *fixP, valueT * valP, segT seg ATTRIBUTE_UNUSED)
     fixP->fx_done = 1;
   else if ((int) fixP->fx_r_type >= (int) BFD_RELOC_UNUSED)
     {
-      as_bad(_("Fixup of undefined symbol %s at 0x%lx (%s:%d) not allowed"),
-	    S_GET_NAME (fixP->fx_addsy),
-	    fixP->fx_frag->fr_address + fixP->fx_where,
-	    fixP->fx_file, fixP->fx_line);
       fixP->fx_done = 1;
-      return;
+
+      /* Allow fixups of things like *+12 where * is relative to the
+         most recent .using. For mystery reasons, gas assigns the name
+         *ABS* to the * symbol.  At any rate, old gcc's generate this.
+         Not a problem for HLASM, which treats * differently, anyway.  */
+      if (strcmp(S_GET_NAME (fixP->fx_addsy), "*ABS*"))
+	{
+	    as_bad(_("Fixup of undefined symbol %s at 0x%lx (%s:%d) not allowed"),
+		    S_GET_NAME (fixP->fx_addsy),
+		    fixP->fx_frag->fr_address + fixP->fx_where,
+		    fixP->fx_file, fixP->fx_line);
+	    return;
+	}
     }
 
 #ifdef DEBUG
