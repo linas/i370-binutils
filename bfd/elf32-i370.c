@@ -1381,10 +1381,10 @@ i370_elf_relocate_section (bfd *output_bfd,
 }
 
 static bool
-i370_elf_finish_dynamic_symbol(bfd *,
-                               struct bfd_link_info *,
-                               struct elf_link_hash_entry *,
-                               Elf_Internal_Sym *)
+i370_elf_finish_dynamic_symbol(bfd * a ATTRIBUTE_UNUSED,
+                               struct bfd_link_info * b ATTRIBUTE_UNUSED,
+                               struct elf_link_hash_entry * c ATTRIBUTE_UNUSED,
+                               Elf_Internal_Sym *d ATTRIBUTE_UNUSED)
 {
 	return true;
 }
