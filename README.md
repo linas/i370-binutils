@@ -148,6 +148,16 @@ cd ../i370-examples
 ../build/gas/as-new -a=bignum-bug.lst -o bignum-bug.obj bignum-bug.s
 ```
 
+#### Self-hosting
+If you have a C library, then the next step is self-hosting. The uClibc
+library should work. Try this:
+```
+mkdir build-uclibc
+cd build-uclibc
+../configure --target=i370-ibm-linux --host=i370-ibm-linux --disable-gdb CFLAGS="-I/usr/local/i370-linux-uclibc/usr/include -L/usr/local/i370-linux-uclibc/usr/lib"
+make
+```
+
 
 ### Documentation
 The assembly instructions are documented in:
