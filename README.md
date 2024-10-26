@@ -154,7 +154,7 @@ library should work. Try this:
 ```
 mkdir build-uclibc
 cd build-uclibc
-../configure --target=i370-ibm-linux --host=i370-ibm-linux --disable-gdb CFLAGS="-I/usr/local/i370-linux-uclibc/usr/include -L/usr/local/i370-linux-uclibc/usr/lib"
+../configure --target=i370-ibm-linux --host=i370-ibm-linux --disable-gdb CFLAGS="-I/usr/local/i370-linux/include -I/usr/local/i370-linux-uclibc/usr/include -L/usr/local/i370-linux-uclibc/usr/lib"
 make
 ```
 
