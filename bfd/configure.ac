@@ -829,7 +829,7 @@ if test "${target}" = "${host}"; then
 	;;
   i370-*-*)
       COREFILE=trad-core.lo
-      TRAD_HEADER='"hosts/i370linux.h"'
+      # TRAD_HEADER='"hosts/i370linux.h"'
       ;;
 
 changequote(,)dnl
