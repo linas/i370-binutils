@@ -169,18 +169,20 @@ cd build-uclibc
 export SYSROOT=/usr/local/i370-linux-uclibc
 ../configure --target=i370-ibm-linux --host=i370-ibm-linux \
       --disable-gdb --disable-sim \
-      --prefix=$(SYSROOT)/usr \
-      CFLAGS="-I$(SYSROOT)/usr/include -B$(SYSROOT)/usr/lib -L$(SYSROOT)/usr/lib -DHAVE_FCNTL_H -DTLS=\"\""
+      --prefix=${SYSROOT}/usr
+
+make CFLAGS="-I${SYSROOT)/usr/include -B${SYSROOT)/usr/lib -L${SYSROOT)/usr/lib -DHAVE_FCNTL_H -DTLS=\"\" -DPTR=\"void*\" -DANSI_PROTOTYPES"
 make
 sudo make install
 ```
 The `--prefix` controls where the result is installed. The `-B` flag is
-required, as otherwise the wrong `crt1.o` is picked up, uClibc is not
-initialized, and `malloc` won't work (for example: `as --dump-config`
-will reply:
-`out of memory allocating 4072 bytes after a total of 114584 bytes`
-which is clearly insane.) The `-DHAVE_FCNTL_H -DTLS=\"\"` are hacky
-work-arounds for mystery deficiencies in `configure`.
+required, as otherwise the wrong `crt1.o` is picked up and uClibc is not
+initialized, and `malloc` won't work.
+
+ATTN: The above works for 2.30 and 2.43 versions of binutils. The
+2.14 version is rather decrepit, and won't cleanly compile, and
+I'm not willing to fight it in its current state. Versions 2.43
+or at leastt 2.30 are strongly recommended.
 
 Running this assembler requires a working shell. Busybox is enough.
 Two teensy stupid patches are needed to get busybox to work in i370.
