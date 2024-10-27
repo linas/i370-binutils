@@ -162,8 +162,8 @@ cd build-uclibc
 export SYSROOT=/usr/local/i370-linux-uclibc
 ../configure --target=i370-ibm-linux --host=i370-ibm-linux \
       --disable-gdb --disable-sim \
-      --prefix=$(SYSROOT)/usr \
-      CFLAGS="-I$(SYSROOT)/usr/include -B$(SYSROOT)/usr/lib -L$(SYSROOT)/usr/lib -DHAVE_FCNTL_H -DTLS=\"\""
+      --prefix=${SYSROOT}/usr \
+      CFLAGS="-I${SYSROOT}/usr/include -B${SYSROOT}/usr/lib -L${SYSROOT}/usr/lib -DHAVE_FCNTL_H -DTLS=\"\""
 make
 sudo make install
 ```
