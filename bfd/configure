@@ -5118,7 +5118,7 @@ if test "${target}" = "${host}"; then
 			COREFLAG="-DHPUX_CORE -DHPPABSD_CORE" ;;
   i370-*-*)
 	COREFILE=trad-core.lo
-	TRAD_HEADER='"hosts/i370linux.h"'
+	# TRAD_HEADER='"hosts/i370linux.h"'
 	;;
 
   i[3456]86-sequent-bsd*)
