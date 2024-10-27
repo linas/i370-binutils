@@ -164,25 +164,30 @@ The uClibc library should work. A version that works for i370 is here:
 [github.com/linas/i370-uclibc-ng](https://github.com/linas/i370-uclibc-ng)
 Build it, install it, and then try this (on the host, not the target):
 ```
+export SYSROOT=/usr/local/i370-linux-uclibc
+sudo rm -f ${SYSROOT}/usr/include/ansidecl.h
 mkdir build-uclibc
 cd build-uclibc
-export SYSROOT=/usr/local/i370-linux-uclibc
+CPPFLAGS="-I$SYSROOT/usr/include"
+CFLAGS="$CPPFLAGS -B$SYSROOT/usr/lib -L$SYSROOT/usr/lib -DHAVE_FCNTL_H -DTLS=\"\"" \
 ../configure --target=i370-ibm-linux --host=i370-ibm-linux \
       --disable-gdb --disable-sim \
-      --prefix=${SYSROOT}/usr
-
-make CFLAGS="-I${SYSROOT)/usr/include -B${SYSROOT)/usr/lib -L${SYSROOT)/usr/lib -DHAVE_FCNTL_H -DTLS=\"\" -DPTR=\"void*\" -DANSI_PROTOTYPES"
+      --prefix=$SYSROOT/usr
 make
 sudo make install
 ```
+The `rm ansidecl.h` removes a file installed by binutils, which
+interferes with later rebuilds of binutils/libiberty, which also
+has an `ansidecl.h` with different contents.
+
 The `--prefix` controls where the result is installed. The `-B` flag is
 required, as otherwise the wrong `crt1.o` is picked up and uClibc is not
 initialized, and `malloc` won't work.
 
-ATTN: The above works for 2.30 and 2.43 versions of binutils. The
-2.14 version is rather decrepit, and won't cleanly compile, and
-I'm not willing to fight it in its current state. Versions 2.43
-or at leastt 2.30 are strongly recommended.
+ATTN: The 2.30 and 2.43 versions of binutils build cleanly. The
+2.14 version does not. The above instructions are my current best guess,
+but they still won't build the whole package.
+Using versions 2.43 or at least 2.30 are strongly recommended.
 
 Running this assembler requires a working shell. Busybox is enough.
 Two teensy stupid patches are needed to get busybox to work in i370.
