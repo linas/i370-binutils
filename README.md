@@ -135,9 +135,9 @@ modern versions of `makeinfo`, which breaks the install. Using
 `/bin/true` (or just plain `true`) effectively bypasses the issue.
 
 The final call to `sudo make install` copies the binaries to two
-different places: once to `/usr/local/i370-ibm-elf/bin/` under their
+different places: once to `/usr/local/i370-ibm-linux/bin/` under their
 short, conventional names (`as`, `objdump`, etc.) and once to
-`/usr/local/bin/i370-ibm-elf-*`. This allows for suitable operation
+`/usr/local/bin/i370-ibm-linux-*`. This allows for suitable operation
 in a cross-compiler environoment, so that the binaries do int interfere
 with the host binaries, while remaining accessible to downstream tools.
 In particular, the gcc compiler expects to find them there.
@@ -146,7 +146,9 @@ In particular, the gcc compiler expects to find them there.
 Versions 2.30 and master include gdb. In master, gdb requires a C++
 compiler to compile. Aside from this, the rest of the package can build
 with a pure C90 compiler. The build of gdb can be disabled by adding
-`--disable-gdb` to the configure flags.
+`--disable-gdb` to the configure flags. If there's trouble, also try
+`--disable-sim`; this is a collection of system simulators that are
+not used here.
 
 #### Examples
 Bug fixes can be verified with the example source demos:
@@ -154,6 +156,36 @@ Bug fixes can be verified with the example source demos:
 cd ../i370-examples
 ../build/gas/as-new -a=bignum-bug.lst -o bignum-bug.obj bignum-bug.s
 ```
+
+#### Cross-hosting
+If you have a C library, then the next step is cross-hosting. This
+builds a version of the assembler that will run natively on the i370.
+The uClibc library should work. A version that works for i370 is here:
+[github.com/linas/i370-uclibc-ng](https://github.com/linas/i370-uclibc-ng)
+Build it, install it, and then try this (on the host, not the target):
+```
+mkdir build-uclibc
+cd build-uclibc
+export SYSROOT=/usr/local/i370-linux-uclibc
+../configure --target=i370-ibm-linux --host=i370-ibm-linux \
+      --disable-gdb --disable-sim \
+      --prefix=$(SYSROOT)/usr \
+      CFLAGS="-I$(SYSROOT)/usr/include -B$(SYSROOT)/usr/lib -L$(SYSROOT)/usr/lib -DHAVE_FCNTL_H -DTLS=\"\""
+make
+sudo make install
+```
+The `--prefix` controls where the result is installed. The `-B` flag is
+required, as otherwise the wrong `crt1.o` is picked up, uClibc is not
+initialized, and `malloc` won't work (for example: `as --dump-config`
+will reply:
+`out of memory allocating 4072 bytes after a total of 114584 bytes`
+which is clearly insane.) The `-DHAVE_FCNTL_H -DTLS=\"\"` are hacky
+work-arounds for mystery deficiencies in `configure`.
+
+Running this assembler requires a working shell. Busybox is enough.
+Two teensy stupid patches are needed to get busybox to work in i370.
+Get them from here:
+[github.com/linas/i370-bigfoot](https://github.com/linas/i370-bigfoot).
 
 
 ### Documentation
