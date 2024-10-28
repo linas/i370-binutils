@@ -1054,7 +1054,7 @@ gen_to_hexfloat_words (LITTLENUM_TYPE *words, int type)
   else if ('L' == type)
     {
       as_bad("long double precision not supported");
-      // gen_to_words(words, 4, 8);
+      /* gen_to_words(words, 4, 8); */
     }
 }
 
