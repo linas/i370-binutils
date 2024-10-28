@@ -65,6 +65,9 @@ provides a C and C++ compiler that emits HLASM (see
 Most notable is that this version of binutils creates only ELF objects
 and binaries.  Support for the
 [ESD/XSD/GOFF](https://en.wikipedia.org/wiki/GOFF) object format is absent.
+There is a linker/loader that can link ELF binaries to MVS binaries.
+Thus, in principle, ELF images created by this assembler can run on MVS.
+Inquire with Paul Edwards, the author of PDOS, for more info.
 
 The `-mhlasm` flag must be set run in the compatibility mode,
 i.e. to get labels wthout dots and trailing colons, to get working
