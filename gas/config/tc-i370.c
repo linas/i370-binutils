@@ -150,12 +150,6 @@ const pseudo_typeS md_pseudo_table[] =
   /* Enable ebcdic strings e.g. for 3270 support. */
   { "ebcdic",   i370_ebcdic,	1 },
 
-#ifdef OBJ_ELF_SUFFIX
-  { "long",     i370_elf_cons,	4 },
-  { "word",     i370_elf_cons,	4 },
-  { "short",    i370_elf_cons,	2 },
-#endif
-
 #ifdef OBJ_ELF
   /* Override {"word", cons, 2} in read.c */
   { "word",     cons,		4 },
@@ -753,149 +747,8 @@ i370_insert_operand (insn, operand, val)
 }
 
 
-#ifdef OBJ_ELF_SUFFIX
-/* Parse @got, etc. and return the desired relocation.
-   Currently, i370 does not support (don't really need to support) any
-   of these fancier markups ... for example, no one is going to
-   write 'L 6,=V(bogus)@got' it just doesn't make sense (at least to me).
-   So basically, we could get away with this routine returning
-   BFD_RELOC_UNUSED in all circumstances.  However, I'll leave
-   in for now in case someone ambitious finds a good use for this stuff ...
-   this routine was pretty much just copied from the powerpc code ...  */
-static bfd_reloc_code_real_type
-i370_elf_suffix (str_p, exp_p)
-     char **str_p;
-     expressionS *exp_p;
-{
-  struct map_bfd
-  {
-    char *string;
-    int length;
-    bfd_reloc_code_real_type reloc;
-  };
-
-  char ident[20];
-  char *str = *str_p;
-  char *str2;
-  int ch;
-  int len;
-  struct map_bfd *ptr;
-
-#define MAP(str,reloc) { str, sizeof (str)-1, reloc }
-
-  static struct map_bfd mapping[] =
-  {
-#if 0
-    MAP ("l",		BFD_RELOC_LO16),
-    MAP ("h",		BFD_RELOC_HI16),
-    MAP ("ha",		BFD_RELOC_HI16_S),
-#endif
-    /* warnings with -mrelocatable.  */
-    MAP ("fixup",	BFD_RELOC_CTOR),
-    { (char *)0, 0,	BFD_RELOC_UNUSED }
-  };
-
-  if (*str++ != '@')
-    return BFD_RELOC_UNUSED;
-
-  for (ch = *str, str2 = ident;
-       (str2 < ident + sizeof (ident) - 1
-        && (ISALNUM (ch) || ch == '@'));
-       ch = *++str)
-    {
-      *str2++ = TOLOWER (ch);
-    }
-
-  *str2 = '\0';
-  len = str2 - ident;
-
-  ch = ident[0];
-  for (ptr = &mapping[0]; ptr->length > 0; ptr++)
-    if (ch == ptr->string[0]
-        && len == ptr->length
-        && memcmp (ident, ptr->string, ptr->length) == 0)
-      {
-        if (exp_p->X_add_number != 0
-            && (ptr->reloc == BFD_RELOC_16_GOTOFF
-        	|| ptr->reloc == BFD_RELOC_LO16_GOTOFF
-        	|| ptr->reloc == BFD_RELOC_HI16_GOTOFF
-        	|| ptr->reloc == BFD_RELOC_HI16_S_GOTOFF))
-          as_warn ("identifier+constant@got means identifier@got+constant");
-
-        /* Now check for identifier@suffix+constant */
-        if (*str == '-' || *str == '+')
-          {
-            char *orig_line = input_line_pointer;
-            expressionS new_exp;
-
-            input_line_pointer = str;
-            expression (&new_exp);
-            if (new_exp.X_op == O_constant)
-              {
-        	exp_p->X_add_number += new_exp.X_add_number;
-        	str = input_line_pointer;
-              }
-
-            if (&input_line_pointer != str_p)
-              input_line_pointer = orig_line;
-          }
-
-        *str_p = str;
-        return ptr->reloc;
-      }
-
-  return BFD_RELOC_UNUSED;
-}
-
-/* Like normal .long/.short/.word, except support @got, etc.  */
-/* clobbers input_line_pointer, checks end-of-line.  */
-static void
-i370_elf_cons (nbytes)
-     register int nbytes;        /* 1=.byte, 2=.word, 4=.long */
-{
-  expressionS xexp;
-  bfd_reloc_code_real_type reloc;
-
-  if (is_it_end_of_statement ())
-    {
-      demand_empty_rest_of_line ();
-      return;
-    }
-
-  do
-    {
-      expression (&xexp);
-      if (xexp.X_op == O_symbol
-          && *input_line_pointer == '@'
-          && (reloc = i370_elf_suffix (&input_line_pointer, &xexp)) != BFD_RELOC_UNUSED)
-        {
-          reloc_howto_type *reloc_howto = bfd_reloc_type_lookup (stdoutput, reloc);
-          int size = bfd_get_reloc_size (reloc_howto);
-
-          if (size > nbytes)
-            as_bad ("%s relocations do not fit in %d bytes\n", reloc_howto->name, nbytes);
-
-          else
-            {
-              register char *p = frag_more ((int) nbytes);
-              int offset = nbytes - size;
-
-              fix_new_exp (frag_now, p - frag_now->fr_literal + offset, size, &xexp, 0, reloc);
-            }
-        }
-      else
-        emit_expr (&xexp, (unsigned int) nbytes);
-    }
-  while (*input_line_pointer++ == ',');
-
-  input_line_pointer--;        	/* Put terminator back into stream.  */
-  demand_empty_rest_of_line ();
-}
-#endif /* OBJ_ELF_SUFFIX */
-
 #ifdef OBJ_ELF
 
-
 /* ASCII to EBCDIC conversion table.  */
 static unsigned char ascebc[256] =
 {
@@ -1438,7 +1291,6 @@ i370_dc_align (char type)
 }
 
 /* DC Define Const.
-   For sample code on handling other constants, look at i370_elf_cons()
 
    This code handles pseudo-ops of the style
    DC   D'3.141592653'   # in sysv4, .double 3.14159265
@@ -2449,9 +2301,6 @@ md_assemble (str)
   int fc;
   char *f;
   int i;
-#ifdef OBJ_ELF_SUFFIX
-  bfd_reloc_code_real_type reloc;
-#endif
 
   /* Get the opcode.  */
   for (s = str; *s != '\0' && ! ISSPACE (*s); s++)
@@ -2656,60 +2505,9 @@ md_assemble (str)
       else if (ex.X_op == O_absent)
         as_bad ("missing operand");
       else if (ex.X_op == O_register)
-        {
-          insn = i370_insert_operand (insn, operand, ex.X_add_number);
-        }
+        insn = i370_insert_operand (insn, operand, ex.X_add_number);
       else if (ex.X_op == O_constant)
-        {
-#ifdef OBJ_ELF_SUFFIX
-          /* Allow @HA, @L, @H on constants.
-           * Well actually, no we don't; there really don't make sense
-           * (at least not to me) for the i370.  However, this code is
-           * left here for any dubious future expansion reasons ...  */
-          char *orig_str = str;
-
-          if ((reloc = i370_elf_suffix (&str, &ex)) != BFD_RELOC_UNUSED)
-            switch (reloc)
-              {
-              default:
-        	str = orig_str;
-        	break;
-
-              case BFD_RELOC_LO16:
-        	/* X_unsigned is the default, so if the user has done
-                   something which cleared it, we always produce a
-                   signed value.  */
-		ex.X_add_number = (((ex.X_add_number & 0xffff)
-				    ^ 0x8000)
-				   - 0x8000);
-        	break;
-
-              case BFD_RELOC_HI16:
-        	ex.X_add_number = (ex.X_add_number >> 16) & 0xffff;
-        	break;
-
-              case BFD_RELOC_HI16_S:
-        	ex.X_add_number = (((ex.X_add_number >> 16) & 0xffff)
-        			   + ((ex.X_add_number >> 15) & 1));
-        	break;
-              }
-#endif
-          insn = i370_insert_operand (insn, operand, ex.X_add_number);
-        }
-#ifdef OBJ_ELF_SUFFIX
-      else if ((reloc = i370_elf_suffix (&str, &ex)) != BFD_RELOC_UNUSED)
-        {
-          as_tsktsk ("md_assemble(): suffixed relocations not supported\n");
-
-          /* We need to generate a fixup for this expression.  */
-          if (fc >= MAX_INSN_FIXUPS)
-            as_fatal ("too many fixups");
-          fixups[fc].xexp = ex;
-          fixups[fc].opindex = 0;
-          fixups[fc].reloc = reloc;
-          ++fc;
-        }
-#endif /* OBJ_ELF_SUFFIX */
+        insn = i370_insert_operand (insn, operand, ex.X_add_number);
       else
         {
           /* We need to generate a fixup for this expression.  */
@@ -2777,41 +2575,6 @@ md_assemble (str)
 		       ((bfd_reloc_code_real_type)
 			(fixups[i].opindex + (int) BFD_RELOC_UNUSED)));
 	}
-#ifdef OBJ_ELF_SUFFIX
-      else
-	{
-	  reloc_howto_type *reloc_howto = bfd_reloc_type_lookup (stdoutput, fixups[i].reloc);
-	  int size;
-	  fixS *fixP;
-
-	  if (!reloc_howto)
-	    abort ();
-
-	  size = bfd_get_reloc_size (reloc_howto);
-
-	  if (size < 1 || size > 4)
-	    abort ();
-
-	  printf (" gwana doo fixup %d \n", i);
-	  fixP = fix_new_exp (frag_now, f - frag_now->fr_literal, size,
-         		      &fixups[i].xexp, reloc_howto->pc_relative,
-         		      fixups[i].reloc);
-
-	  /* Turn off complaints that the addend is too large for things like
-	     foo+100000@ha.  */
-	  switch (fixups[i].reloc)
-	    {
-	    case BFD_RELOC_16_GOTOFF:
-	    case BFD_RELOC_LO16:
-	    case BFD_RELOC_HI16:
-	    case BFD_RELOC_HI16_S:
-	      fixP->fx_no_overflow = 1;
-	      break;
-	    default:
-	      break;
-	    }
-	}
-#endif /* OBJ_ELF_SUFFIX */
     }
 }
 
