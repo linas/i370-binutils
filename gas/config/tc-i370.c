@@ -2436,7 +2436,7 @@ md_assemble (char *str)
       input_line_pointer = str;
 
       /* Register names are only allowed where there are registers.  */
-      if ((operand->flags & I370_OPERAND_GPR) != 0)
+      if ((operand->flags & (I370_OPERAND_GPR|I370_OPERAND_MASK)) != 0)
         {
           /* Quickie hack to get past things like (,r13).  */
           if (skip_optional_index && (',' == *input_line_pointer))
@@ -2785,6 +2785,7 @@ md_apply_fix (fixS *fixP, valueT * valP, segT seg ATTRIBUTE_UNUSED)
       const struct i370_operand *operand;
       char *where;
       i370_insn_t insn;
+      insn.i[0] = insn.i[1] = 0;
 
       opindex = (int) fixP->fx_r_type - (int) BFD_RELOC_UNUSED;
       operand = &i370_operands[opindex];
