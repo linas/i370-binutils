@@ -974,7 +974,7 @@ gen_to_hexfloat_words (LITTLENUM_TYPE *words, int type)
 
   /* Convert 9-bit exponent into 7-bit HFP characteristic. */
   iexp ++;
-  chistic = iexp >> 2;
+  chistic = (iexp >> 2) + 1;
   shift = 3;
   while (iexp & 0x3) { iexp--; shift --; }
 
