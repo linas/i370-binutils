@@ -925,7 +925,7 @@ i370_entry (int unused ATTRIBUTE_UNUSED)
 
 #define BIGNUM_CACHE 8    /* Eight LITTLENUM_TYPE's so 16 bytes total */
 
-/* Create IBM Floating Point Decimal
+/* Create IBM Decimal Floating Point
    TODO: Implement me!  */
 static void
 gen_to_decfloat_words (LITTLENUM_TYPE *words, int type ATTRIBUTE_UNUSED)
@@ -935,32 +935,87 @@ gen_to_decfloat_words (LITTLENUM_TYPE *words, int type ATTRIBUTE_UNUSED)
   as_bad (_("IBM Decimal floats currently not supported"));
 }
 
-/* Create IBM Floating Point Hex. This is probably wrong,
-   Its a crude approximation for what it should be.
+/* Create IBM Hex Floating Point (HFP).
+   The conceptual algo here is stright-forward: let the IEEE code do
+   its thing, and then take that, extract the exponent and mantissa,
+   convert the exponent to the "characteristic" and shift the mantissa
+   into place. The IEEE conversion will be done at greater precision
+   than what the final HFP needs.
+
+   XXX FIXME TODO: Verify that +inf, -inf and -0.0 are handled correctly.
+   Also make sure the compiler finds out if min and max exponent are
+   exceeded. There is no support for denormalized floats.
  */
 static void
 gen_to_hexfloat_words (LITTLENUM_TYPE *words, int type)
 {
+  short i, j;
+  unsigned short chistic;
+  short shift = 0;
+  short lsb = 0;
+
+  /* LITTLENUM_TYPE is unsigned short in bignum.h */
   memset(words, 0, BIGNUM_CACHE * sizeof(LITTLENUM_TYPE));
 
-  /* The below is incorrect, but vaguely approximate for
-     the IBM hex format. It generates 8-bit exponents and
-     24 or 56-bit mantissas.
-     See atof-ieee.c gen_to_words() for example.
-     It's ... complicated. */
+  /* The below generates 9-bit exponents and more mantisisa bits than
+     we'll need for that format, all in IEEE format.  See atof-ieee.c
+     gen_to_words().
+     */
   if ('E' == type)
-    {
-      gen_to_words(words, 2, 8);
-    }
+    gen_to_words(words, 3, 9);
   else if ('D' == type)
-    {
-      gen_to_words(words, 4, 8);
-    }
+    gen_to_words(words, 5, 9);
   else if ('L' == type)
+    gen_to_words(words, 8, 9);
+
+  /* Extract sign bit and 9-bit exponent */
+  LITTLENUM_TYPE sign = words[0] & 0x8000;
+  LITTLENUM_TYPE iexp = (words[0] & 0x7fc0) >> 6;
+
+  /* Convert 9-bit exponent into 7-bit HFP characteristic. */
+  iexp ++;
+  chistic = iexp >> 2;
+  shift = 3;
+  while (iexp & 0x3) { iexp--; shift --; }
+
+  /* Zap IEEE exponent and sign. (The top ten bits.) */
+  words[0] &= 0x3f;
+
+  /* Install normalization bit that IEEE cut off. */
+  words[0] |= 0x40;
+
+  /* Shift left one bit (so that mantissa starts at bit 8) */
+  for (i=7; 0 < i; i--)
     {
-      as_bad("long double precision not supported");
-      /* gen_to_words(words, 4, 8); */
+      lsb = words[i] & 0x8000;
+      words[i] <<= 1;
+      words[i-1] |= (lsb >> 15);
     }
+  words[0] <<= 1;
+
+  /* Shift right zero to three times, to convert binary to hex. */
+  for (j=0; j<shift; j++)
+    {
+      for (i=7; 0 < i; i--)
+        {
+          lsb = words[i-1] & 0x1;
+          words[i] >>= 1;
+          words[i] |= (lsb << 15);
+        }
+      words[0] >>= 1;
+    }
+
+  if ('L' == type)
+    {
+        /* Make room for unused characteristic. */
+        words[7] = (words[7] >> 8) | (words[6] << 8);
+        words[6] = (words[6] >> 8) | (words[5] << 8);
+        words[5] = (words[5] >> 8) | (words[4] << 8);
+        words[4] = (words[4] >> 8);
+    }
+
+  /* Insert the sign bit and characteristic back in. */
+  words[0] |= sign | (chistic << 8);
 }
 
 static int
@@ -1100,7 +1155,7 @@ i370_parse_const (expressionS *xexp)
 		  gen_to_words(fltnum, 2, 8);
 	        else if ('D' == name[1]) /* Decimal */
 		  gen_to_decfloat_words(fltnum, name[0]);
-	        else /* Assume "Floating Point Hex" aka old-style IBM */
+	        else /* Assume "Hex Floating Point" (HFP) */
 		  gen_to_hexfloat_words(fltnum, name[0]);
 
 	        generic_bignum[0] = fltnum[1];
@@ -1112,7 +1167,7 @@ i370_parse_const (expressionS *xexp)
 		  gen_to_words(fltnum, 4, 11);
 	        else if ('D' == name[1]) /* Decimal */
 		  gen_to_decfloat_words(fltnum, name[0]);
-	        else /* Assume "Floating Point Hex" aka old-style IBM */
+	        else /* Assume "Hex Floating Point Hex" (HFP) */
 		  gen_to_hexfloat_words(fltnum, name[0]);
 
 	        /* This is correct if host is LE, but what if host is BE? */
@@ -1127,7 +1182,7 @@ i370_parse_const (expressionS *xexp)
 		  gen_to_words(fltnum, 8, 15);
 	        else if ('D' == name[1]) /* Decimal */
 		  gen_to_decfloat_words(fltnum, name[0]);
-	        else /* Assume "Floating Point Hex" aka old-style IBM */
+	        else /* Assume "Hex Floating Point" (HFP) */
 		  gen_to_hexfloat_words(fltnum, name[0]);
 
 	        /* This is correct if host is LE, but what if host is BE? */
