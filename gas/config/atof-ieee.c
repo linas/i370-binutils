@@ -25,7 +25,11 @@ extern FLONUM_TYPE generic_floating_point_number;
 
 /* Precision in LittleNums.  */
 /* Don't count the gap in the m68k extended precision format.  */
-#define MAX_PRECISION  5
+#ifdef TC_I370
+  #define MAX_PRECISION  8
+#else
+  #define MAX_PRECISION  5
+#endif
 #define F_PRECISION    2
 #define D_PRECISION    4
 #define X_PRECISION    5
@@ -144,6 +148,10 @@ make_invalid_floating_point_number (LITTLENUM_TYPE *words)
   words[3] = (LITTLENUM_TYPE) -1;
   words[4] = (LITTLENUM_TYPE) -1;
   words[5] = (LITTLENUM_TYPE) -1;
+#ifdef TC_I370
+  words[6] = (LITTLENUM_TYPE) -1;
+  words[7] = (LITTLENUM_TYPE) -1;
+#endif /* TC_I370 */
 }
 
 /* Warning: This returns 16-bit LITTLENUMs.  It is up to the caller to
@@ -306,7 +314,15 @@ gen_to_words (LITTLENUM_TYPE *words, int precision, long exponent_bits)
 	  words[3] = 0;
 	  words[4] = 0;
 #else /* ! TC_I386  */
+#ifdef TC_I370
+	  words[0] = 0x7fff;
+	  words[1] = 0xffff;
+	  words[2] = 0xffff;
+	  words[3] = 0xffff;
+	  words[4] = 0xffff;
+#else /* ! TC_I370  */
 	  abort ();
+#endif /* ! TC_I370  */
 #endif /* ! TC_I386  */
 #endif /* ! TC_M68K  */
 	}
@@ -316,6 +332,15 @@ gen_to_words (LITTLENUM_TYPE *words, int precision, long exponent_bits)
 	  words[1] = 0xffff;
 	  words[2] = 0xffff;
 	  words[3] = 0xffff;
+#ifdef TC_I370
+     if (precision == 8)
+       {
+	      words[4] = 0xffff;
+	      words[5] = 0xffff;
+	      words[6] = 0xffff;
+	      words[7] = 0xffff;
+       }
+#endif /* TC_I370  */
 	}
       return return_value;
     }
@@ -347,7 +372,16 @@ gen_to_words (LITTLENUM_TYPE *words, int precision, long exponent_bits)
 	  words[3] = 0;
 	  words[4] = 0;
 #else /* ! TC_I386  */
+#ifdef TC_I370
+	  words[0] = 0x7fc0;
+	  words[1] = 0;
+	  words[2] = 0;
+	  words[3] = 0;
+	  words[4] = 0;
+	  words[5] = 0;
+#else /* ! TC_I370  */
 	  abort ();
+#endif /* ! TC_I370  */
 #endif /* ! TC_I386  */
 #endif /* ! TC_M68K  */
 	}
