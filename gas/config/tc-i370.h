@@ -88,6 +88,10 @@ extern void cons_fix_new_i370 (fragS *, int, int, expressionS *, bfd_reloc_code_
 #define tc_comment_chars i370_comment_chars
 extern const char *i370_comment_chars;
 
+/* All 32/64-bit strings are valid float numbers. Just that some are
+   denormalized. So there's no QNaN, SNaN, +inf or -inf avalable.  */
+#define TC_LARGEST_EXPONENT_IS_NORMAL(PRECISION) 1
+
 #define DWARF2_LINE_MIN_INSN_LENGTH     1
 #define DWARF2_DEFAULT_RETURN_COLUMN    14  /* Link register is r14 */
 #define DWARF2_CIE_DATA_ALIGNMENT       -4  /* 32-bit arch */
