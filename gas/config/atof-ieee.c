@@ -429,7 +429,7 @@ gen_to_words (LITTLENUM_TYPE *words, int precision, long exponent_bits)
 #else /* ! TC_I386  */
 #ifdef TC_I370
      /* This is converted to largest possible float. */
-	  words[0] = 0x7dff;
+	  words[0] = 0x7ebf;
 	  words[1] = 0xffff;
 	  words[2] = 0xffff;
 	  words[3] = 0xffff;
@@ -444,7 +444,7 @@ gen_to_words (LITTLENUM_TYPE *words, int precision, long exponent_bits)
 	{
 #ifdef TC_I370
      /* This is converted to largest possible float. */
-	  words[0] = 0x7dff;
+	  words[0] = 0x7ebf;
 	  words[1] = 0xffff;
 	  words[2] = 0xffff;
 	  words[3] = 0xffff;
