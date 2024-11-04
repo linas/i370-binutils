@@ -377,7 +377,16 @@ gen_to_words (LITTLENUM_TYPE *words, int precision, long exponent_bits)
 	  words[3] = 0xffff;
 	  words[4] = 0xffff;
 #else /* ! TC_I386  */
+#ifdef TC_I370
+	  /* This is converted to largest possible float. */
+	  words[0] = 0x7ebf;
+	  words[1] = 0xffff;
+	  words[2] = 0xffff;
+	  words[3] = 0xffff;
+	  words[4] = 0xffff;
+#else /* ! TC_I370  */
 	  abort ();
+#endif /* ! TC_I370  */
 #endif /* ! TC_I386  */
 #endif /* ! TC_M68K  */
 	}
@@ -428,7 +437,7 @@ gen_to_words (LITTLENUM_TYPE *words, int precision, long exponent_bits)
 	  words[4] = 0;
 #else /* ! TC_I386  */
 #ifdef TC_I370
-     /* This is converted to largest possible float. */
+	  /* This is converted to largest possible float. */
 	  words[0] = 0x7ebf;
 	  words[1] = 0xffff;
 	  words[2] = 0xffff;
@@ -443,7 +452,7 @@ gen_to_words (LITTLENUM_TYPE *words, int precision, long exponent_bits)
       else
 	{
 #ifdef TC_I370
-     /* This is converted to largest possible float. */
+	  /* This is converted to largest possible float. */
 	  words[0] = 0x7ebf;
 	  words[1] = 0xffff;
 	  words[2] = 0xffff;
