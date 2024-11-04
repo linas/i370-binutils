@@ -2132,7 +2132,9 @@ i370_ltorg (ignore)
       return;
     }
 
-  /* find largest literal .. 2 4 or 8 */
+  /* Find largest literal .. 2, 4, 8 or 16. The 16's
+     occur as 128-bit extended floats, but they can align
+     to 8 bytes (I think).  */
   lit_count = 0;
   while (lit_count < next_literal_pool_place)
     {
@@ -2144,7 +2146,8 @@ i370_ltorg (ignore)
   else if (2 == biggest_literal_size) biggest_align = 1;
   else if (4 == biggest_literal_size) biggest_align = 2;
   else if (8 == biggest_literal_size) biggest_align = 3;
-  else as_bad ("bad alignment of %d bytes in literal pool", biggest_literal_size);
+  else if (16 == biggest_literal_size) biggest_align = 3;
+  else as_bad (_("bad alignment of %d bytes in literal pool"), biggest_literal_size);
   if (0 == biggest_align) biggest_align = 1;
 
   /* Align pool for short, word, double word accesses. */
@@ -2206,6 +2209,23 @@ i370_ltorg (ignore)
 	      if (debug_type == DEBUG_DWARF2)
 		dwarf2_gen_line_info (frag_now_fix (), &literals[lit_count].loc);
 #endif
+	    }
+
+	  /* Hack for 16-byte float lits in the 8-byte pool. */
+	  if (8 == litsize && 16 == literals[lit_count].size &&
+	      literals[lit_count].xexp.X_op == O_big)
+	    {
+	      generic_bignum[0] = literals[lit_count].bignum[0];
+	      generic_bignum[1] = literals[lit_count].bignum[1];
+	      generic_bignum[2] = literals[lit_count].bignum[2];
+	      generic_bignum[3] = literals[lit_count].bignum[3];
+	      generic_bignum[4] = literals[lit_count].bignum[4];
+	      generic_bignum[5] = literals[lit_count].bignum[5];
+	      generic_bignum[6] = literals[lit_count].bignum[6];
+	      generic_bignum[7] = literals[lit_count].bignum[7];
+
+	      emit_expr (&(literals[lit_count].xexp), literals[lit_count].size);
+	      byte_count += literals[lit_count].size;
 	    }
 	  lit_count ++;
 	}
