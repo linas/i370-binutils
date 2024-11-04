@@ -21,11 +21,13 @@
    Software Foundation, 59 Temple Place - Suite 330, Boston, MA
    02111-1307, USA.  */
 
-/* This assembler implements the mashup of ELF and HLASM emited by the
- * gcc i370 compiler. The main difference between HLASM and ELF is that
- * ELF uses a dot in from of the pseudo-ops, while HLASM does not. The
- * -mhlasm flag is uses to control this.
- */
+/* This assembler implements the mashup of svr4 and HLASM emitted by the
+   gcc i370 compiler. Differences include having a dot (or not) in front
+   of labels, using . vs * for current location, and support for an
+   assortment of HLASM-specific pseudo-ops vs. the standard set defined
+   in the svr4 specs.  The -mhlasm flag places the assembler into HLASM
+   compatibility mode, where it tries to emuate HLASM as much as
+   possible. */
 
 #include "as.h"
 #include "safe-ctype.h"
@@ -1541,7 +1543,7 @@ i370_ds (int unused ATTRIBUTE_UNUSED)
 
 
 /* Attempt at supporting general EQU statements.
- * Expressions must evalute to a constant.
+ * Expressions must evaluate to a constant.
  * Currently supported forms:
  *    FOO EQU 8
  *    FOO EQU 42 - 21
@@ -1570,8 +1572,8 @@ static void do_equ(char* token)
   input_line_pointer--;
 }
 
-/* Support for DS and DC occuring on the same line as a label.
- * In such a case, alginment must be done *before* the label is issued.
+/* Support for DS and DC occurring on the same line as a label.
+ * In such a case, alignment must be done *before* the label is issued.
  */
 bfd_boolean i370_align_label(char * line_start)
 {
@@ -1848,7 +1850,7 @@ add_to_lit_pool (expressionS *exx, char *name, int sz)
 	}
 
       /* Cache the value of generic_bignum; we need this later,
-       * when issueing the ltorg. Cache 16 bytes total.  */
+       * when issuing the ltorg. Cache 16 bytes total.  */
       if (exx->X_op == O_big)
 	memcpy (literals[next_literal_pool_place].bignum,
 		generic_bignum, BIGNUM_CACHE * sizeof(LITTLENUM_TYPE));
@@ -2887,7 +2889,7 @@ i370_tc (ignore)
 /* Turn a string in input_line_pointer into a floating point constant
    of type TYPE, and store the appropriate bytes in *LITP.  The number
    of LITTLENUMS emitted is stored in *SIZEP.  An error message is
-   returned, or NULL on OK.  */
+   returned, or NULL on OK.
 
    It appears that this is only called when the .float or the
    .double pseudo-ops appear in the assembly file. The gcc compiler
