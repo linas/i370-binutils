@@ -962,7 +962,7 @@ gen_to_hexfloat_words (LITTLENUM_TYPE *words, int type)
   short i, j;
   unsigned short chistic;
   short shift = 0;
-  short lsb = 0;
+  unsigned short lsb = 0;
 
   /* LITTLENUM_TYPE is unsigned short in bignum.h */
   memset(words, 0, BIGNUM_CACHE * sizeof(LITTLENUM_TYPE));
