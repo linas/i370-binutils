@@ -1204,8 +1204,8 @@ i370_parse_const (expressionS *xexp)
 	  as_bad (_("missing end-quote"));
       }
 
-    if (('X' == name[0]) || ('E' == name[0]) ||
-        ('D' == name[0]) || ('L' == name[0]))
+    if (('X' == name[0]) || ('B' == name[0]) ||
+        ('E' == name[0]) || ('D' == name[0]) || ('L' == name[0]))
       {
 #define TMPSZ 50
 	char tmp[TMPSZ];
@@ -1247,10 +1247,11 @@ i370_parse_const (expressionS *xexp)
 	/* I believe this works even for XL8'dada0000beeebaaa'
 	   which should parse out to X_op == O_big
 	   Note that floats and doubles get represented as
-	   0d3.14159265358979  or 0f 2.7.  */
+	   0f2.71828  or 0d3.14159265358979.  */
 	tmp[0] = '0';
 	tmp[1] = name[0];
 	tmp[2] = 0;
+	if ('L' == name[0]) tmp[1] = 'd';  /* fake out expression() */
 	strncat (tmp, input_line_pointer, TMPSZ-5);
 	save = input_line_pointer;
 	input_line_pointer = tmp;
@@ -2868,6 +2869,14 @@ i370_tc (ignore)
    of LITTLENUMS emitted is stored in *SIZEP.  An error message is
    returned, or NULL on OK.  */
 
+   It appears that this is only called when the .float or the
+   .double pseudo-ops appear in the assembly file. The gcc compiler
+   never generates these, and these are not valid pseudo-ops for HLASM
+   (which uses DC, which goes through a different decode path.)
+   So basically, this function should never get called in the ordinary
+   course of events. So its OK to just default to IEEE and ignore the
+   HFP formats.
+ */
 char *
 md_atof (type, litp, sizep)
      int type;
@@ -2898,14 +2907,6 @@ md_atof (type, litp, sizep)
       return "bad call to md_atof";
     }
 
-  /* 360/370/390 have three different float formats:
-     H Hex, which is the old-style, 24-bit or 56-bit mantissa
-     B Binary, which is IEEE, 24-bit or 53-bit mantissa
-     D Decimal, which is uhh, decimal.
-
-     Support only "Binary" (IEEE).
-     FIXME: Add support for Hex.
-  */
   t = atof_ieee (input_line_pointer, type, words);
   if (t)
     input_line_pointer = t;
