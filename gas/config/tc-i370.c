@@ -965,14 +965,39 @@ gen_to_hexfloat_words (LITTLENUM_TYPE *words, int type)
 
   /* The below generates 9-bit exponents and more mantisisa bits than
      we'll need for that format, all in IEEE format.  See atof-ieee.c
-     gen_to_words().
+     gen_to_words(). Special-case zero.
      */
   if ('E' == type)
-    gen_to_words(words, 3, 9);
+    {
+      gen_to_words(words, 3, 9);
+      if ((0 == (words[0] & 0x7fff)) &&
+          (0 == words[1]) &&
+          (0 == words[2]))
+        return;  /* Its zero. Nothing to do. */
+    }
   else if ('D' == type)
-    gen_to_words(words, 5, 9);
+    {
+      gen_to_words(words, 5, 9);
+      if ((0 == (words[0] & 0x7fff)) &&
+          (0 == words[1]) &&
+          (0 == words[2]) &&
+          (0 == words[3]) &&
+          (0 == words[4]))
+        return;  /* Its zero. Nothing to do. */
+    }
   else if ('L' == type)
-    gen_to_words(words, 8, 9);
+    {
+      gen_to_words(words, 8, 9);
+      if ((0 == (words[0] & 0x7fff)) &&
+          (0 == words[1]) &&
+          (0 == words[2]) &&
+          (0 == words[3]) &&
+          (0 == words[4]) &&
+          (0 == words[5]) &&
+          (0 == words[6]) &&
+          (0 == words[7]))
+        return;  /* Its zero. Nothing to do. */
+    }
 
   /* Extract sign bit and 9-bit exponent */
   LITTLENUM_TYPE sign = words[0] & 0x8000;
