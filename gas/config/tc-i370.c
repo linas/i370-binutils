@@ -1036,10 +1036,6 @@ gen_to_decfloat_words (LITTLENUM_TYPE *words, int type ATTRIBUTE_UNUSED)
    convert the exponent to the "characteristic" and shift the mantissa
    into place. The IEEE conversion will be done at greater precision
    than what the final HFP needs.
-
-   XXX FIXME TODO: Verify that +inf, -inf and -0.0 are handled correctly.
-   Also make sure the compiler finds out if min and max exponent are
-   exceeded. There is no support for denormalized floats.
  */
 static void
 gen_to_hexfloat_words (LITTLENUM_TYPE *words, int type)
