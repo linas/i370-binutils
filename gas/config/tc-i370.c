@@ -995,13 +995,13 @@ gen_to_hexfloat_words (LITTLENUM_TYPE *words, int type)
   words[0] |= 0x40;
 
   /* Shift left one bit (so that mantissa starts at bit 8) */
-  for (i=7; 0 < i; i--)
+  for (i=0; i < 7; i++)
     {
-      lsb = words[i] & 0x8000;
+      lsb = words[i+1] & 0x8000;
       words[i] <<= 1;
-      words[i-1] |= (lsb >> 15);
+      words[i] |= (lsb >> 15);
     }
-  words[0] <<= 1;
+  words[7] <<= 1;
 
   /* Shift right zero to three times, to convert binary to hex. */
   for (j=0; j<shift; j++)
