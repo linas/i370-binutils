@@ -459,7 +459,221 @@ abort();
 
   return true;
 }
+
+/* Create the .data.pool section that will hold TOC entries.
+   TODO: might also need .dynsbss and .rela.sbss and maybe other things
+   stolen from _bfd_elf_create_dynamic_sections. Under construction,
+   not everything works yet.
+ */
+static bool
+i370_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
+{
+  struct elf_link_hash_table *htab = elf_hash_table (info);
 
+  asection *s;
+  flagword flags;
+  flags = (SEC_ALLOC | SEC_CODE | SEC_LOAD | SEC_HAS_CONTENTS
+	   | SEC_LINKER_CREATED);
+
+#ifdef DEBUG
+  fprintf(stderr, "i370_elf_create_dynamic_sections called\n");
+#endif
+
+  s = bfd_make_section_anyway_with_flags (abfd, ".data.plink", flags);
+  if (s == NULL)
+    return false;
+  htab->splt = s;
+
+  s = bfd_make_section_anyway_with_flags (abfd, ".rela.pool",
+                                          flags | SEC_READONLY);
+  if (s == NULL)
+    return false;
+  htab->srelplt = s;
+
+  return true;
+}
+
+/* Look through the relocs for a section during the first phase, and
+   allocate space in the global offset table or procedure linkage
+   table.  */
+/* XXX hack alert bogus This routine is mostly all junk and almost
+   certainly does the wrong thing.  Its here simply because it does
+   just enough to allow glibc-2.1 ld.so to compile & link.  */
+
+static bool
+i370_elf_check_relocs (bfd *abfd,
+		       struct bfd_link_info *info,
+		       asection *sec,
+		       const Elf_Internal_Rela *relocs)
+{
+  bfd *dynobj;
+  Elf_Internal_Shdr *symtab_hdr;
+  struct elf_link_hash_entry **sym_hashes;
+  const Elf_Internal_Rela *rel;
+  const Elf_Internal_Rela *rel_end;
+  asection *sreloc;
+
+  if (bfd_link_relocatable (info))
+    return true;
+
+#ifdef DEBUG
+  _bfd_error_handler ("i370_elf_check_relocs called for section %pA in %pB",
+		      sec, abfd);
+#endif
+
+  dynobj = elf_hash_table (info)->dynobj;
+  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  sym_hashes = elf_sym_hashes (abfd);
+
+  sreloc = NULL;
+
+  rel_end = relocs + sec->reloc_count;
+  for (rel = relocs; rel < rel_end; rel++)
+    {
+      unsigned long r_symndx;
+      struct elf_link_hash_entry *h;
+
+      r_symndx = ELF32_R_SYM (rel->r_info);
+      if (r_symndx < symtab_hdr->sh_info)
+	h = NULL;
+      else
+	{
+	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
+	  while (h->root.type == bfd_link_hash_indirect
+		 || h->root.type == bfd_link_hash_warning)
+	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
+	}
+
+      if (bfd_link_pic (info))
+	{
+#ifdef DEBUG
+	  /* if (h && h->root.root.string) */
+	  fprintf (stderr,
+		   "i370_elf_check_relocs needs to create relocation for %s\n",
+		   (h && h->root.root.string)
+		   ? h->root.root.string : "<unknown>");
+#endif
+	  if (sreloc == NULL)
+	    {
+	      sreloc = _bfd_elf_make_dynamic_reloc_section
+		(sec, dynobj, 2, abfd, /*rela?*/ true);
+
+	      if (sreloc == NULL)
+		return false;
+	    }
+
+	  sreloc->size += sizeof (Elf32_External_Rela);
+	}
+    }
+
+  return true;
+}
+
+/* Adjust a symbol defined by a dynamic object and referenced by a
+   regular object.  The current definition is in some section of the
+   dynamic object, but we're not including those sections.  We have to
+   change the definition to something the rest of the link can
+   understand.  */
+/* XXX hack alert bogus This routine is mostly all junk and almost
+   certainly does the wrong thing.  Its here simply because it does
+   just enough to allow glibc-2.1 ld.so to compile & link.  */
+
+static bool
+i370_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
+				struct elf_link_hash_entry *h)
+{
+  bfd *dynobj = elf_hash_table (info)->dynobj;
+  asection *s;
+
+#ifdef DEBUG
+  /* h->root.u.def.section->vma points at the start of .data.pool
+     (in the input shared object.) The h->root.u.def.value is the
+     offset to the entry for the function.  */
+  asection *ss = h->root.u.def.section;
+  bfd_vma loco = ss->vma + h->root.u.def.value;
+  fprintf (stderr,
+     "i370_adjust_dynamic in %s off %lx at %lx sym= %s\n",
+	   bfd_section_name(ss), ss->output_offset, loco, h->root.root.string);
+#endif
+
+  /* Make sure we know what is going on here.  */
+  BFD_ASSERT (dynobj != NULL
+	      && (h->needs_plt
+		  || h->is_weakalias
+		  || (h->def_dynamic
+		      && h->ref_regular
+		      && !h->def_regular)));
+
+  s = bfd_get_linker_section (dynobj, ".data.plink");
+  BFD_ASSERT (s != NULL);
+
+  return true;
+
+#ifdef NOT_YET_MAYBE_NEVER
+  s->size += sizeof (Elf32_External_Rela);
+
+  /* If this is a weak symbol, and there is a real definition, the
+     processor independent code will have arranged for us to see the
+     real definition first, and we can just use the same value.  */
+  if (h->is_weakalias)
+    {
+      struct elf_link_hash_entry *def = weakdef (h);
+      BFD_ASSERT (def->root.type == bfd_link_hash_defined);
+      h->root.u.def.section = def->root.u.def.section;
+      h->root.u.def.value = def->root.u.def.value;
+      return true;
+    }
+
+  /* This is a reference to a symbol defined by a dynamic object which
+     is not a function.  */
+
+  /* If we are creating a shared library, we must presume that the
+     only references to the symbol are via the global offset table.
+     For such cases we need not do anything here; the relocations will
+     be handled correctly by relocate_section.  */
+  if (bfd_link_pic (info))
+    return true;
+
+  /* We must allocate the symbol in our .dynbss section, which will
+     become part of the .bss section of the executable.  There will be
+     an entry for this symbol in the .dynsym section.  The dynamic
+     object will contain position independent code, so all references
+     from the dynamic object to this symbol will go through the global
+     offset table.  The dynamic linker will use the .dynsym entry to
+     determine the address it must put in the global offset table, so
+     both the dynamic object and the regular object will refer to the
+     same memory location for the variable.
+
+     Of course, if the symbol is sufficiently small, we must instead
+     allocate it in .sbss.  FIXME: It would be better to do this if and
+     only if there were actually SDAREL relocs for that symbol.  */
+
+  if (h->size <= elf_gp_size (dynobj))
+    s = bfd_get_linker_section (dynobj, ".dynsbss");
+  else
+    s = bfd_get_linker_section (dynobj, ".dynbss");
+  BFD_ASSERT (s != NULL);
+
+  /* We must generate a R_I370_COPY reloc to tell the dynamic linker to
+     copy the initial value out of the dynamic object and into the
+     runtime process image.  We need to remember the offset into the
+     .rela.bss section we are going to use.  */
+  if ((h->root.u.def.section->flags & SEC_ALLOC) != 0 && h->size != 0)
+    {
+      asection *srel;
+
+      if (h->size <= elf_gp_size (dynobj))
+	srel = bfd_get_linker_section (dynobj, ".rela.sbss");
+      else
+	srel = bfd_get_linker_section (dynobj, ".rela.bss");
+      BFD_ASSERT (srel != NULL);
+      srel->size += sizeof (Elf32_External_Rela);
+      h->needs_copy = 1;
+    }
+
+  return _bfd_elf_adjust_dynamic_copy (info, h, s);
+#endif
+}
 
 #define is_i370_elf(bfd) \
   (bfd_get_flavour (bfd) == bfd_target_elf_flavour)
@@ -638,221 +852,6 @@ i370_elf_late_size_sections (bfd *output_bfd,
   return _bfd_elf_add_dynamic_tags (output_bfd, info, relocs|plt|reltext);
 }
 
-
-/* Create the .data.pool section that will hold TOC entries.
-   TODO: might also need .dynsbss and .rela.sbss and maybe other things
-   stolen from _bfd_elf_create_dynamic_sections. Under construction,
-   not everything works yet.
- */
-static bool
-i370_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
-{
-  struct elf_link_hash_table *htab = elf_hash_table (info);
-
-  asection *s;
-  flagword flags;
-  flags = (SEC_ALLOC | SEC_CODE | SEC_LOAD | SEC_HAS_CONTENTS
-	   | SEC_LINKER_CREATED);
-
-#ifdef DEBUG
-  fprintf(stderr, "i370_elf_create_dynamic_sections called\n");
-#endif
-
-  s = bfd_make_section_anyway_with_flags (abfd, ".data.plink", flags);
-  if (s == NULL)
-    return false;
-  htab->splt = s;
-
-  s = bfd_make_section_anyway_with_flags (abfd, ".rela.pool",
-                                          flags | SEC_READONLY);
-  if (s == NULL)
-    return false;
-  htab->srelplt = s;
-
-  return true;
-}
-
-/* Look through the relocs for a section during the first phase, and
-   allocate space in the global offset table or procedure linkage
-   table.  */
-/* XXX hack alert bogus This routine is mostly all junk and almost
-   certainly does the wrong thing.  Its here simply because it does
-   just enough to allow glibc-2.1 ld.so to compile & link.  */
-
-static bool
-i370_elf_check_relocs (bfd *abfd,
-		       struct bfd_link_info *info,
-		       asection *sec,
-		       const Elf_Internal_Rela *relocs)
-{
-  bfd *dynobj;
-  Elf_Internal_Shdr *symtab_hdr;
-  struct elf_link_hash_entry **sym_hashes;
-  const Elf_Internal_Rela *rel;
-  const Elf_Internal_Rela *rel_end;
-  asection *sreloc;
-
-  if (bfd_link_relocatable (info))
-    return true;
-
-#ifdef DEBUG
-  _bfd_error_handler ("i370_elf_check_relocs called for section %pA in %pB",
-		      sec, abfd);
-#endif
-
-  dynobj = elf_hash_table (info)->dynobj;
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
-  sym_hashes = elf_sym_hashes (abfd);
-
-  sreloc = NULL;
-
-  rel_end = relocs + sec->reloc_count;
-  for (rel = relocs; rel < rel_end; rel++)
-    {
-      unsigned long r_symndx;
-      struct elf_link_hash_entry *h;
-
-      r_symndx = ELF32_R_SYM (rel->r_info);
-      if (r_symndx < symtab_hdr->sh_info)
-	h = NULL;
-      else
-	{
-	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
-	  while (h->root.type == bfd_link_hash_indirect
-		 || h->root.type == bfd_link_hash_warning)
-	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
-	}
-
-      if (bfd_link_pic (info))
-	{
-#ifdef DEBUG
-	  /* if (h && h->root.root.string) */
-	  fprintf (stderr,
-		   "i370_elf_check_relocs needs to create relocation for %s\n",
-		   (h && h->root.root.string)
-		   ? h->root.root.string : "<unknown>");
-#endif
-	  if (sreloc == NULL)
-	    {
-	      sreloc = _bfd_elf_make_dynamic_reloc_section
-		(sec, dynobj, 2, abfd, /*rela?*/ true);
-
-	      if (sreloc == NULL)
-		return false;
-	    }
-
-	  sreloc->size += sizeof (Elf32_External_Rela);
-	}
-    }
-
-  return true;
-}
-
-/* Adjust a symbol defined by a dynamic object and referenced by a
-   regular object.  The current definition is in some section of the
-   dynamic object, but we're not including those sections.  We have to
-   change the definition to something the rest of the link can
-   understand.  */
-/* XXX hack alert bogus This routine is mostly all junk and almost
-   certainly does the wrong thing.  Its here simply because it does
-   just enough to allow glibc-2.1 ld.so to compile & link.  */
-
-static bool
-i370_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
-				struct elf_link_hash_entry *h)
-{
-  bfd *dynobj = elf_hash_table (info)->dynobj;
-  asection *s;
-
-#ifdef DEBUG
-  /* h->root.u.def.section->vma points at the start of .data.pool
-     (in the input shared object.) The h->root.u.def.value is the
-     offset to the entry for the function.  */
-  asection *ss = h->root.u.def.section;
-  bfd_vma loco = ss->vma + h->root.u.def.value;
-  fprintf (stderr,
-     "i370_adjust_dynamic in %s off %lx at %lx sym= %s\n",
-	   bfd_section_name(ss), ss->output_offset, loco, h->root.root.string);
-#endif
-
-  /* Make sure we know what is going on here.  */
-  BFD_ASSERT (dynobj != NULL
-	      && (h->needs_plt
-		  || h->is_weakalias
-		  || (h->def_dynamic
-		      && h->ref_regular
-		      && !h->def_regular)));
-
-  s = bfd_get_linker_section (dynobj, ".data.plink");
-  BFD_ASSERT (s != NULL);
-
-  return true;
-
-#ifdef NOT_YET_MAYBE_NEVER
-  s->size += sizeof (Elf32_External_Rela);
-
-  /* If this is a weak symbol, and there is a real definition, the
-     processor independent code will have arranged for us to see the
-     real definition first, and we can just use the same value.  */
-  if (h->is_weakalias)
-    {
-      struct elf_link_hash_entry *def = weakdef (h);
-      BFD_ASSERT (def->root.type == bfd_link_hash_defined);
-      h->root.u.def.section = def->root.u.def.section;
-      h->root.u.def.value = def->root.u.def.value;
-      return true;
-    }
-
-  /* This is a reference to a symbol defined by a dynamic object which
-     is not a function.  */
-
-  /* If we are creating a shared library, we must presume that the
-     only references to the symbol are via the global offset table.
-     For such cases we need not do anything here; the relocations will
-     be handled correctly by relocate_section.  */
-  if (bfd_link_pic (info))
-    return true;
-
-  /* We must allocate the symbol in our .dynbss section, which will
-     become part of the .bss section of the executable.  There will be
-     an entry for this symbol in the .dynsym section.  The dynamic
-     object will contain position independent code, so all references
-     from the dynamic object to this symbol will go through the global
-     offset table.  The dynamic linker will use the .dynsym entry to
-     determine the address it must put in the global offset table, so
-     both the dynamic object and the regular object will refer to the
-     same memory location for the variable.
-
-     Of course, if the symbol is sufficiently small, we must instead
-     allocate it in .sbss.  FIXME: It would be better to do this if and
-     only if there were actually SDAREL relocs for that symbol.  */
-
-  if (h->size <= elf_gp_size (dynobj))
-    s = bfd_get_linker_section (dynobj, ".dynsbss");
-  else
-    s = bfd_get_linker_section (dynobj, ".dynbss");
-  BFD_ASSERT (s != NULL);
-
-  /* We must generate a R_I370_COPY reloc to tell the dynamic linker to
-     copy the initial value out of the dynamic object and into the
-     runtime process image.  We need to remember the offset into the
-     .rela.bss section we are going to use.  */
-  if ((h->root.u.def.section->flags & SEC_ALLOC) != 0 && h->size != 0)
-    {
-      asection *srel;
-
-      if (h->size <= elf_gp_size (dynobj))
-	srel = bfd_get_linker_section (dynobj, ".rela.sbss");
-      else
-	srel = bfd_get_linker_section (dynobj, ".rela.bss");
-      BFD_ASSERT (srel != NULL);
-      srel->size += sizeof (Elf32_External_Rela);
-      h->needs_copy = 1;
-    }
-
-  return _bfd_elf_adjust_dynamic_copy (info, h, s);
-#endif
-}
 
 /* Finish up the dynamic sections.  */
 /* XXX hack alert bogus This routine is mostly all junk and almost
