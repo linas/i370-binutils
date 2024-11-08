@@ -478,6 +478,11 @@ i370_elf_late_size_sections (bfd *output_bfd,
   bool reltext = false;
   bfd *ibfd;
 
+#ifdef DEBUG
+  fprintf(stderr, "i370_elf_late_size_sections entered for %s\n",
+          bfd_get_filename(output_bfd));
+#endif
+
   dynobj = elf_hash_table (info)->dynobj;
   if (dynobj == NULL)
     return true;
@@ -646,24 +651,19 @@ i370_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
 
   asection *s;
   flagword flags;
-  flags = (SEC_ALLOC | SEC_LOAD | SEC_HAS_CONTENTS | SEC_IN_MEMORY
+  flags = (SEC_ALLOC | SEC_CODE | SEC_LOAD | SEC_HAS_CONTENTS
 	   | SEC_LINKER_CREATED);
 
-  s = bfd_make_section_anyway_with_flags (abfd, ".data.pool", flags);
-  if (s == NULL)
-    return false;
+#ifdef DEBUG
+  fprintf(stderr, "i370_elf_create_dynamic_sections called\n");
+#endif
 
-  /* If we don't create a .plt and a .rela.plt, then
-     _bfd_elf_add_dynamic_tags crashes with a null-pointer deref to
-     htab->splt->size. But we haven't written the code to use plt yet,
-     so this is a waste. Maybe later. XXX FIXME. */
-  flags = SEC_ALLOC | SEC_CODE | SEC_LOAD;
-  s = bfd_make_section_anyway_with_flags (abfd, ".plt", flags);
+  s = bfd_make_section_anyway_with_flags (abfd, ".data.plink", flags);
   if (s == NULL)
     return false;
   htab->splt = s;
 
-  s = bfd_make_section_anyway_with_flags (abfd, ".rela.plt",
+  s = bfd_make_section_anyway_with_flags (abfd, ".rela.pool",
                                           flags | SEC_READONLY);
   if (s == NULL)
     return false;
@@ -689,8 +689,14 @@ i370_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
   asection *s;
 
 #ifdef DEBUG
-  fprintf (stderr, "i370_elf_adjust_dynamic_symbol called for %s\n",
-	   h->root.root.string);
+  /* h->root.u.def.section->vma points at the start of .data.pool
+     (in the input shared object.) The h->root.u.def.value is the
+     offset to the entry for the function.  */
+  asection *ss = h->root.u.def.section;
+  bfd_vma loco = ss->vma + h->root.u.def.value;
+  fprintf (stderr,
+     "i370_adjust_dynamic in %s off %lx at %lx sym= %s\n",
+	   bfd_section_name(ss), ss->output_offset, loco, h->root.root.string);
 #endif
 
   /* Make sure we know what is going on here.  */
@@ -701,7 +707,7 @@ i370_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
 		      && h->ref_regular
 		      && !h->def_regular)));
 
-  s = bfd_get_linker_section (dynobj, ".data.pool");
+  s = bfd_get_linker_section (dynobj, ".data.plink");
   BFD_ASSERT (s != NULL);
 
   return true;
@@ -842,13 +848,6 @@ i370_elf_check_relocs (bfd *abfd,
 	    }
 
 	  sreloc->size += sizeof (Elf32_External_Rela);
-
-	  /* FIXME: We should here do what the m68k and i386
-	     backends do: if the reloc is pc-relative, record it
-	     in case it turns out that the reloc is unnecessary
-	     because the symbol is forced local by versioning or
-	     we are linking with -Bdynamic.  Fortunately this
-	     case is not frequent.  */
 	}
     }
 
@@ -869,7 +868,8 @@ i370_elf_finish_dynamic_sections (bfd *output_bfd,
   asection *sgot = elf_hash_table (info)->sgot;
 
 #ifdef DEBUG
-  fprintf (stderr, "i370_elf_finish_dynamic_sections called\n");
+  fprintf (stderr, "i370_elf_finish_dynamic_sections called for %s\n",
+           bfd_get_filename(output_bfd));
 #endif
 
   sdyn = bfd_get_linker_section (dynobj, ".dynamic");
@@ -1118,7 +1118,9 @@ i370_elf_relocate_section (bfd *output_bfd,
 	      /* Else sometimes the output section is null !?? */
 	      else if (NULL == sec->output_section)
 		{
-		  fprintf(stderr, "Oh no! linker has no output section for %s\n", sym_name);
+		  fprintf(stderr,
+             "Oh no! linker has no output section for %s in %s\n",
+             sym_name, bfd_section_name(sec));
 		}
 	      else
 		relocation = (h->root.u.def.value
@@ -1390,11 +1392,17 @@ i370_elf_relocate_section (bfd *output_bfd,
 }
 
 static bool
-i370_elf_finish_dynamic_symbol(bfd * a ATTRIBUTE_UNUSED,
-                               struct bfd_link_info * b ATTRIBUTE_UNUSED,
-                               struct elf_link_hash_entry * c ATTRIBUTE_UNUSED,
-                               Elf_Internal_Sym *d ATTRIBUTE_UNUSED)
+i370_elf_finish_dynamic_symbol(bfd * output_bfd ATTRIBUTE_UNUSED,
+                               struct bfd_link_info * info ATTRIBUTE_UNUSED,
+                               struct elf_link_hash_entry * h ATTRIBUTE_UNUSED,
+                               Elf_Internal_Sym *sym ATTRIBUTE_UNUSED)
 {
+#ifdef DEBUG
+  const char * sym_name;
+  sym_name = h->root.root.string;
+  _bfd_error_handler ("i370_elf_finish_dynamic_symbol called for %s in %pB ",
+		      sym_name, output_bfd);
+#endif
 	return true;
 }
 
