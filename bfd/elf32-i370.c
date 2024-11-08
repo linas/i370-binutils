@@ -413,8 +413,7 @@ i370_elf_fake_sections (bfd *abfd ATTRIBUTE_UNUSED,
   return true;
 }
 
-/* Allocate space in .plt, .got and associated reloc sections for
-   dynamic relocs.  */
+/* Allocate space in .data.pool for dynamic relocs.  */
 
 static bool
 allocate_dynrelocs (struct elf_link_hash_entry *h, void * inf)
@@ -635,39 +634,40 @@ i370_elf_late_size_sections (bfd *output_bfd,
 }
 
 
-/* We have to create .dynsbss and .rela.sbss here so that they get mapped
-   to output sections (just like _bfd_elf_create_dynamic_sections has
-   to create .dynbss and .rela.bss).  */
-/* XXX hack alert bogus This routine is mostly all junk and almost
-   certainly does the wrong thing.  Its here simply because it does
-   just enough to allow glibc-2.1 ld.so to compile & link.  */
-
+/* Create the .data.pool section that will hold TOC entries.
+   TODO: might also need .dynsbss and .rela.sbss and maybe other things
+   stolen from _bfd_elf_create_dynamic_sections. Under construction,
+   not everything works yet.
+ */
 static bool
 i370_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
 {
+  struct elf_link_hash_table *htab = elf_hash_table (info);
 
-  if (!_bfd_elf_create_dynamic_sections(abfd, info))
-    return false;
-
-#if SEEMS_NOT_TO_BE_NEEDED
   asection *s;
   flagword flags;
   flags = (SEC_ALLOC | SEC_LOAD | SEC_HAS_CONTENTS | SEC_IN_MEMORY
 	   | SEC_LINKER_CREATED);
 
-  s = bfd_make_section_anyway_with_flags (abfd, ".dynsbss",
-					  SEC_ALLOC | SEC_LINKER_CREATED);
+  s = bfd_make_section_anyway_with_flags (abfd, ".data.pool", flags);
   if (s == NULL)
     return false;
 
-  if (! bfd_link_pic (info))
-    {
-      s = bfd_make_section_anyway_with_flags (abfd, ".rela.sbss",
-					      flags | SEC_READONLY);
-      if (s == NULL || ! bfd_set_section_alignment (s, 2))
-	return false;
-    }
-#endif
+  /* If we don't create a .plt and a .rela.plt, then
+     _bfd_elf_add_dynamic_tags crashes with a null-pointer deref to
+     htab->splt->size. But we haven't written the code to use plt yet,
+     so this is a waste. Maybe later. XXX FIXME. */
+  flags = SEC_ALLOC | SEC_CODE | SEC_LOAD;
+  s = bfd_make_section_anyway_with_flags (abfd, ".plt", flags);
+  if (s == NULL)
+    return false;
+  htab->splt = s;
+
+  s = bfd_make_section_anyway_with_flags (abfd, ".rela.plt",
+                                          flags | SEC_READONLY);
+  if (s == NULL)
+    return false;
+  htab->srelplt = s;
 
   return true;
 }
@@ -701,8 +701,12 @@ i370_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
 		      && h->ref_regular
 		      && !h->def_regular)));
 
-  s = bfd_get_linker_section (dynobj, ".rela.text");
+  s = bfd_get_linker_section (dynobj, ".data.pool");
   BFD_ASSERT (s != NULL);
+
+  return true;
+
+#ifdef NOT_YET_MAYBE_NEVER
   s->size += sizeof (Elf32_External_Rela);
 
   /* If this is a weak symbol, and there is a real definition, the
@@ -765,6 +769,7 @@ i370_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
     }
 
   return _bfd_elf_adjust_dynamic_copy (info, h, s);
+#endif
 }
 
 /* Look through the relocs for a section during the first phase, and
@@ -992,7 +997,7 @@ i370_elf_finish_dynamic_sections (bfd *output_bfd,
    actually uses Rel structures, the r_addend field will always be
    zero.
 
-   This function is responsible for adjust the section contents as
+   This function is responsible for adjusting the section contents as
    necessary, and (if using Rela relocs and generating a
    relocatable output file) adjusting the reloc addend as
    necessary.
@@ -1099,6 +1104,8 @@ i370_elf_relocate_section (bfd *output_bfd,
 	      || h->root.type == bfd_link_hash_defweak)
 	    {
 	      sec = h->root.u.def.section;
+
+	      /* In these cases, we don't need the relocation value. */
 	      if (bfd_link_pic (info)
 		  && ((! info->symbolic && h->dynindx != -1)
 		      || !h->def_regular)
@@ -1107,10 +1114,12 @@ i370_elf_relocate_section (bfd *output_bfd,
 		      || r_type == R_I370_COPY
 		      || r_type == R_I370_ADDR16
 		      || r_type == R_I370_RELATIVE))
-		/* In these cases, we don't need the relocation
-		   value.  We check specially because in some
-		   obscure cases sec->output_section will be NULL.  */
-		;
+		{}
+	      /* Else sometimes the output section is null !?? */
+	      else if (NULL == sec->output_section)
+		{
+		  fprintf(stderr, "Oh no! linker has no output section for %s\n", sym_name);
+		}
 	      else
 		relocation = (h->root.u.def.value
 			      + sec->output_section->vma
