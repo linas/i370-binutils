@@ -413,53 +413,6 @@ i370_elf_fake_sections (bfd *abfd ATTRIBUTE_UNUSED,
   return true;
 }
 
-/* Allocate space in .data.pool for dynamic relocs.  */
-
-static bool
-allocate_dynrelocs (struct elf_link_hash_entry *h, void * inf)
-{
-  struct bfd_link_info *info;
-  struct elf_link_hash_table *htab;
-  struct elf_dyn_relocs *p;
-
-  if (h->root.type == bfd_link_hash_indirect)
-    return true;
-
-  info = (struct bfd_link_info *) inf;
-  htab = elf_hash_table (info);
-  if (htab == NULL)
-    return false;
-
-  if (htab->dynamic_sections_created
-      && h->plt.refcount > 0)
-    {
-// Needs to be implemented
-abort();
-    }
-  else
-    {
-      h->plt.offset = (bfd_vma) -1;
-      h->needs_plt = 0;
-    }
-
-  if (h->got.refcount > 0)
-    {
-// Needs to be implemented
-abort();
-    }
-  else
-    h->got.offset = (bfd_vma) -1;
-
-  /* Finally, allocate space.  */
-  for (p = h->dyn_relocs; p != NULL; p = p->next)
-    {
-      asection *sreloc = elf_section_data (p->sec)->sreloc;
-      sreloc->size += p->count * sizeof (Elf32_External_Rela);
-    }
-
-  return true;
-}
-
 /* Create the .data.pool section that will hold TOC entries.
    TODO: might also need .dynsbss and .rela.sbss and maybe other things
    stolen from _bfd_elf_create_dynamic_sections. Under construction,
@@ -850,6 +803,58 @@ i370_elf_late_size_sections (bfd *output_bfd,
      the .dynamic section.  The DT_DEBUG entry is filled in by the
      dynamic linker and used by the debugger.  */
   return _bfd_elf_add_dynamic_tags (output_bfd, info, relocs|plt|reltext);
+}
+
+/* Allocate space in .data.pool for dynamic relocs.  */
+
+static bool
+allocate_dynrelocs (struct elf_link_hash_entry *h, void * inf)
+{
+  struct bfd_link_info *info;
+  struct elf_link_hash_table *htab;
+  struct elf_dyn_relocs *p;
+
+#ifdef DEBUG
+  fprintf(stderr, "allocate_dynrelocs for %s %s\n",
+          bfd_section_name(h->root.u.def.section), h->root.root.string);
+#endif
+
+  if (h->root.type == bfd_link_hash_indirect)
+    return true;
+
+  info = (struct bfd_link_info *) inf;
+  htab = elf_hash_table (info);
+  if (htab == NULL)
+    return false;
+
+  if (htab->dynamic_sections_created
+      && h->plt.refcount > 0)
+    {
+// Needs to be implemented
+abort();
+    }
+  else
+    {
+      h->plt.offset = (bfd_vma) -1;
+      h->needs_plt = 0;
+    }
+
+  if (h->got.refcount > 0)
+    {
+// Needs to be implemented
+abort();
+    }
+  else
+    h->got.offset = (bfd_vma) -1;
+
+  /* Finally, allocate space.  */
+  for (p = h->dyn_relocs; p != NULL; p = p->next)
+    {
+      asection *sreloc = elf_section_data (p->sec)->sreloc;
+      sreloc->size += p->count * sizeof (Elf32_External_Rela);
+    }
+
+  return true;
 }
 
 /* The RELOCATE_SECTION function is called by the ELF backend linker
