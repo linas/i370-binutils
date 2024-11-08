@@ -851,143 +851,6 @@ i370_elf_late_size_sections (bfd *output_bfd,
      dynamic linker and used by the debugger.  */
   return _bfd_elf_add_dynamic_tags (output_bfd, info, relocs|plt|reltext);
 }
-
-
-/* Finish up the dynamic sections.  */
-/* XXX hack alert bogus This routine is mostly all junk and almost
-   certainly does the wrong thing.  Its here simply because it does
-   just enough to allow glibc-2.1 ld.so to compile & link.  */
-
-static bool
-i370_elf_finish_dynamic_sections (bfd *output_bfd,
-				  struct bfd_link_info *info)
-{
-  asection *sdyn;
-  bfd *dynobj = elf_hash_table (info)->dynobj;
-  asection *sgot = elf_hash_table (info)->sgot;
-
-#ifdef DEBUG
-  fprintf (stderr, "i370_elf_finish_dynamic_sections called for %s\n",
-           bfd_get_filename(output_bfd));
-#endif
-
-  sdyn = bfd_get_linker_section (dynobj, ".dynamic");
-
-  if (elf_hash_table (info)->dynamic_sections_created)
-    {
-      asection *splt;
-      Elf32_External_Dyn *dyncon, *dynconend;
-
-      splt = elf_hash_table (info)->splt;
-      BFD_ASSERT (splt != NULL && sdyn != NULL);
-
-      dyncon = (Elf32_External_Dyn *) sdyn->contents;
-      dynconend = (Elf32_External_Dyn *) (sdyn->contents + sdyn->size);
-      for (; dyncon < dynconend; dyncon++)
-	{
-	  Elf_Internal_Dyn dyn;
-	  asection *s;
-	  bool size;
-
-	  bfd_elf32_swap_dyn_in (dynobj, dyncon, &dyn);
-
-	  switch (dyn.d_tag)
-	    {
-	    case DT_PLTGOT:
-	      s = elf_hash_table (info)->splt;
-	      size = false;
-	      break;
-	    case DT_PLTRELSZ:
-	      s = elf_hash_table (info)->srelplt;
-	      size = true;
-	      break;
-	    case DT_JMPREL:
-	      s = elf_hash_table (info)->srelplt;
-	      size = false;
-	      break;
-	    default:
-	      continue;
-	    }
-
-	  if (s == NULL)
-	    dyn.d_un.d_val = 0;
-	  else
-	    {
-	      if (!size)
-		dyn.d_un.d_ptr = s->output_section->vma + s->output_offset;
-	      else
-		dyn.d_un.d_val = s->size;
-	    }
-	  bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
-	}
-    }
-
-  if (sgot && sgot->size != 0)
-    {
-      unsigned char *contents = sgot->contents;
-
-      if (sdyn == NULL)
-	bfd_put_32 (output_bfd, (bfd_vma) 0, contents);
-      else
-	bfd_put_32 (output_bfd,
-		    sdyn->output_section->vma + sdyn->output_offset,
-		    contents);
-
-      elf_section_data (sgot->output_section)->this_hdr.sh_entsize = 4;
-    }
-
-  if (bfd_link_pic (info))
-    {
-      asection *sdynsym;
-      asection *s;
-      Elf_Internal_Sym sym;
-      int maxdindx = 0;
-
-      /* Set up the section symbols for the output sections.  */
-
-      sdynsym = bfd_get_linker_section (dynobj, ".dynsym");
-      BFD_ASSERT (sdynsym != NULL);
-
-      sym.st_size = 0;
-      sym.st_name = 0;
-      sym.st_info = ELF_ST_INFO (STB_LOCAL, STT_SECTION);
-      sym.st_other = 0;
-      sym.st_target_internal = 0;
-
-      for (s = output_bfd->sections; s != NULL; s = s->next)
-	{
-	  int indx, dindx;
-	  Elf32_External_Sym *esym;
-
-	  sym.st_value = s->vma;
-
-	  indx = elf_section_data (s)->this_idx;
-	  dindx = elf_section_data (s)->dynindx;
-	  // dindx is -1 if there are no dynamic symbols.
-	  // dindx is 0 if there are symbols in debugging sections,
-	  // but those are being stripped.
-	  if (dindx > 0)
-	    {
-	      BFD_ASSERT(indx > 0);
-
-	      if (dindx > maxdindx)
-		maxdindx = dindx;
-
-	      sym.st_shndx = indx;
-
-	      esym = (Elf32_External_Sym *) sdynsym->contents + dindx;
-	      bfd_elf32_swap_symbol_out (output_bfd, &sym, esym, NULL);
-	    }
-	}
-
-      /* Set the sh_info field of the output .dynsym section to the
-	 index of the first global symbol.  */
-      elf_section_data (sdynsym->output_section)->this_hdr.sh_info =
-	maxdindx + 1;
-    }
-
-  return true;
-}
 
 /* The RELOCATE_SECTION function is called by the ELF backend linker
    to handle the relocations for a section.
@@ -1389,7 +1252,7 @@ i370_elf_relocate_section (bfd *output_bfd,
 
   return ret;
 }
-
+
 static bool
 i370_elf_finish_dynamic_symbol(bfd * output_bfd ATTRIBUTE_UNUSED,
                                struct bfd_link_info * info ATTRIBUTE_UNUSED,
@@ -1403,6 +1266,142 @@ i370_elf_finish_dynamic_symbol(bfd * output_bfd ATTRIBUTE_UNUSED,
 		      sym_name, output_bfd);
 #endif
 	return true;
+}
+
+/* Finish up the dynamic sections.  */
+/* XXX hack alert bogus This routine is mostly all junk and almost
+   certainly does the wrong thing.  Its here simply because it does
+   just enough to allow glibc-2.1 ld.so to compile & link.  */
+
+static bool
+i370_elf_finish_dynamic_sections (bfd *output_bfd,
+				  struct bfd_link_info *info)
+{
+  asection *sdyn;
+  bfd *dynobj = elf_hash_table (info)->dynobj;
+  asection *sgot = elf_hash_table (info)->sgot;
+
+#ifdef DEBUG
+  fprintf (stderr, "i370_elf_finish_dynamic_sections called for %s\n",
+           bfd_get_filename(output_bfd));
+#endif
+
+  sdyn = bfd_get_linker_section (dynobj, ".dynamic");
+
+  if (elf_hash_table (info)->dynamic_sections_created)
+    {
+      asection *splt;
+      Elf32_External_Dyn *dyncon, *dynconend;
+
+      splt = elf_hash_table (info)->splt;
+      BFD_ASSERT (splt != NULL && sdyn != NULL);
+
+      dyncon = (Elf32_External_Dyn *) sdyn->contents;
+      dynconend = (Elf32_External_Dyn *) (sdyn->contents + sdyn->size);
+      for (; dyncon < dynconend; dyncon++)
+	{
+	  Elf_Internal_Dyn dyn;
+	  asection *s;
+	  bool size;
+
+	  bfd_elf32_swap_dyn_in (dynobj, dyncon, &dyn);
+
+	  switch (dyn.d_tag)
+	    {
+	    case DT_PLTGOT:
+	      s = elf_hash_table (info)->splt;
+	      size = false;
+	      break;
+	    case DT_PLTRELSZ:
+	      s = elf_hash_table (info)->srelplt;
+	      size = true;
+	      break;
+	    case DT_JMPREL:
+	      s = elf_hash_table (info)->srelplt;
+	      size = false;
+	      break;
+	    default:
+	      continue;
+	    }
+
+	  if (s == NULL)
+	    dyn.d_un.d_val = 0;
+	  else
+	    {
+	      if (!size)
+		dyn.d_un.d_ptr = s->output_section->vma + s->output_offset;
+	      else
+		dyn.d_un.d_val = s->size;
+	    }
+	  bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+	}
+    }
+
+  if (sgot && sgot->size != 0)
+    {
+      unsigned char *contents = sgot->contents;
+
+      if (sdyn == NULL)
+	bfd_put_32 (output_bfd, (bfd_vma) 0, contents);
+      else
+	bfd_put_32 (output_bfd,
+		    sdyn->output_section->vma + sdyn->output_offset,
+		    contents);
+
+      elf_section_data (sgot->output_section)->this_hdr.sh_entsize = 4;
+    }
+
+  if (bfd_link_pic (info))
+    {
+      asection *sdynsym;
+      asection *s;
+      Elf_Internal_Sym sym;
+      int maxdindx = 0;
+
+      /* Set up the section symbols for the output sections.  */
+
+      sdynsym = bfd_get_linker_section (dynobj, ".dynsym");
+      BFD_ASSERT (sdynsym != NULL);
+
+      sym.st_size = 0;
+      sym.st_name = 0;
+      sym.st_info = ELF_ST_INFO (STB_LOCAL, STT_SECTION);
+      sym.st_other = 0;
+      sym.st_target_internal = 0;
+
+      for (s = output_bfd->sections; s != NULL; s = s->next)
+	{
+	  int indx, dindx;
+	  Elf32_External_Sym *esym;
+
+	  sym.st_value = s->vma;
+
+	  indx = elf_section_data (s)->this_idx;
+	  dindx = elf_section_data (s)->dynindx;
+	  // dindx is -1 if there are no dynamic symbols.
+	  // dindx is 0 if there are symbols in debugging sections,
+	  // but those are being stripped.
+	  if (dindx > 0)
+	    {
+	      BFD_ASSERT(indx > 0);
+
+	      if (dindx > maxdindx)
+		maxdindx = dindx;
+
+	      sym.st_shndx = indx;
+
+	      esym = (Elf32_External_Sym *) sdynsym->contents + dindx;
+	      bfd_elf32_swap_symbol_out (output_bfd, &sym, esym, NULL);
+	    }
+	}
+
+      /* Set the sh_info field of the output .dynsym section to the
+	 index of the first global symbol.  */
+      elf_section_data (sdynsym->output_section)->this_hdr.sh_info =
+	maxdindx + 1;
+    }
+
+  return true;
 }
 
 #define TARGET_BIG_SYM		i370_elf32_vec
