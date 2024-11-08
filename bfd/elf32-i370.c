@@ -671,6 +671,82 @@ i370_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
 
   return true;
 }
+
+/* Look through the relocs for a section during the first phase, and
+   allocate space in the global offset table or procedure linkage
+   table.  */
+/* XXX hack alert bogus This routine is mostly all junk and almost
+   certainly does the wrong thing.  Its here simply because it does
+   just enough to allow glibc-2.1 ld.so to compile & link.  */
+
+static bool
+i370_elf_check_relocs (bfd *abfd,
+		       struct bfd_link_info *info,
+		       asection *sec,
+		       const Elf_Internal_Rela *relocs)
+{
+  bfd *dynobj;
+  Elf_Internal_Shdr *symtab_hdr;
+  struct elf_link_hash_entry **sym_hashes;
+  const Elf_Internal_Rela *rel;
+  const Elf_Internal_Rela *rel_end;
+  asection *sreloc;
+
+  if (bfd_link_relocatable (info))
+    return true;
+
+#ifdef DEBUG
+  _bfd_error_handler ("i370_elf_check_relocs called for section %pA in %pB",
+		      sec, abfd);
+#endif
+
+  dynobj = elf_hash_table (info)->dynobj;
+  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  sym_hashes = elf_sym_hashes (abfd);
+
+  sreloc = NULL;
+
+  rel_end = relocs + sec->reloc_count;
+  for (rel = relocs; rel < rel_end; rel++)
+    {
+      unsigned long r_symndx;
+      struct elf_link_hash_entry *h;
+
+      r_symndx = ELF32_R_SYM (rel->r_info);
+      if (r_symndx < symtab_hdr->sh_info)
+	h = NULL;
+      else
+	{
+	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
+	  while (h->root.type == bfd_link_hash_indirect
+		 || h->root.type == bfd_link_hash_warning)
+	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
+	}
+
+      if (bfd_link_pic (info))
+	{
+#ifdef DEBUG
+	  /* if (h && h->root.root.string) */
+	  fprintf (stderr,
+		   "i370_elf_check_relocs needs to create relocation for %s\n",
+		   (h && h->root.root.string)
+		   ? h->root.root.string : "<unknown>");
+#endif
+	  if (sreloc == NULL)
+	    {
+	      sreloc = _bfd_elf_make_dynamic_reloc_section
+		(sec, dynobj, 2, abfd, /*rela?*/ true);
+
+	      if (sreloc == NULL)
+		return false;
+	    }
+
+	  sreloc->size += sizeof (Elf32_External_Rela);
+	}
+    }
+
+  return true;
+}
 
 /* Adjust a symbol defined by a dynamic object and referenced by a
    regular object.  The current definition is in some section of the
@@ -776,82 +852,6 @@ i370_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
 
   return _bfd_elf_adjust_dynamic_copy (info, h, s);
 #endif
-}
-
-/* Look through the relocs for a section during the first phase, and
-   allocate space in the global offset table or procedure linkage
-   table.  */
-/* XXX hack alert bogus This routine is mostly all junk and almost
-   certainly does the wrong thing.  Its here simply because it does
-   just enough to allow glibc-2.1 ld.so to compile & link.  */
-
-static bool
-i370_elf_check_relocs (bfd *abfd,
-		       struct bfd_link_info *info,
-		       asection *sec,
-		       const Elf_Internal_Rela *relocs)
-{
-  bfd *dynobj;
-  Elf_Internal_Shdr *symtab_hdr;
-  struct elf_link_hash_entry **sym_hashes;
-  const Elf_Internal_Rela *rel;
-  const Elf_Internal_Rela *rel_end;
-  asection *sreloc;
-
-  if (bfd_link_relocatable (info))
-    return true;
-
-#ifdef DEBUG
-  _bfd_error_handler ("i370_elf_check_relocs called for section %pA in %pB",
-		      sec, abfd);
-#endif
-
-  dynobj = elf_hash_table (info)->dynobj;
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
-  sym_hashes = elf_sym_hashes (abfd);
-
-  sreloc = NULL;
-
-  rel_end = relocs + sec->reloc_count;
-  for (rel = relocs; rel < rel_end; rel++)
-    {
-      unsigned long r_symndx;
-      struct elf_link_hash_entry *h;
-
-      r_symndx = ELF32_R_SYM (rel->r_info);
-      if (r_symndx < symtab_hdr->sh_info)
-	h = NULL;
-      else
-	{
-	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
-	  while (h->root.type == bfd_link_hash_indirect
-		 || h->root.type == bfd_link_hash_warning)
-	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
-	}
-
-      if (bfd_link_pic (info))
-	{
-#ifdef DEBUG
-	  /* if (h && h->root.root.string) */
-	  fprintf (stderr,
-		   "i370_elf_check_relocs needs to create relocation for %s\n",
-		   (h && h->root.root.string)
-		   ? h->root.root.string : "<unknown>");
-#endif
-	  if (sreloc == NULL)
-	    {
-	      sreloc = _bfd_elf_make_dynamic_reloc_section
-		(sec, dynobj, 2, abfd, /*rela?*/ true);
-
-	      if (sreloc == NULL)
-		return false;
-	    }
-
-	  sreloc->size += sizeof (Elf32_External_Rela);
-	}
-    }
-
-  return true;
 }
 
 /* Finish up the dynamic sections.  */
