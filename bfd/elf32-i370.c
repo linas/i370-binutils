@@ -581,6 +581,7 @@ i370_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
      non-conventional way, so get different names. */
   h->needs_plt = 1;
 
+  h->plt.offset = s->size;
   /* s->size += sizeof (i370_pool_entry); */
   s->size += 48; /* hack till we figure out wtf */
 
@@ -1272,18 +1273,71 @@ i370_elf_relocate_section (bfd *output_bfd,
   return ret;
 }
 
+/* The i370 compiler emits the following glue for PIC functions:
+
+   .section .data.pool
+   funcname:
+      ST r12,68(r11)       addr  0:  save r12 in frame
+      L  r12,12(r15)       addr  4:  load addr of funcname$fent
+      BR r12               addr  8:  branch to funcname$fent
+      .short 0             addr 10:  padding
+      .long funcname$fent  addr 12:  addr of function in text section
+      .long funcname$pool  addr 16:  location of literal pool
+      .long stacksize      addr 20:  size of stackframe
+      .long funcname$pgt   addr 24:  location of page table (for branches)
+      .long 0              addr 28:  unused; resereved
+
+  It is a combined PLT & GOT: the instructions are PLT-like, and the
+  three addresses are GOT-like. It's combined because r15 provides the
+  indes into the GOT (which is why no additional GOT is needed.)
+
+  Anything linking to `funcname` has to make a copy of this, including
+  both the PLT trampoline and the three relocations. To avoid confusion
+  (increase confusion?) the copy goes into .data.plink and the three
+  relocs go into .rela.pool.
+ */
+
+#define PLINK_INTRO_SIZE 12
+const bfd_byte plink_code[PLINK_INTRO_SIZE] = {
+  0x50, 0xc0, 0xb0, 0x44, /* ST  r12,68(,r11) */
+  0x58, 0xc0, 0xf0, 0x0c, /* L   r12,12(,r15) */
+  0x07, 0xfc,             /* BR   r12 */
+  0x07, 0x00              /* NOOP for alignment */
+};
+
+// xxxxxxxxxx
+static void
+i370_plink_entry_build(struct elf_link_hash_table *htab,
+                       struct elf_link_hash_entry * h)
+{
+  bfd_vma offset = h->plt.offset;
+
+  asection *splt = htab->splt;
+  memcpy(splt->contents + offset, plink_code, PLINK_INTRO_SIZE);
+}
+
+
+/* Finish up dynamic symbol handling. Set the contents of the various
+   dynamic sections.  */
 static bool
 i370_elf_finish_dynamic_symbol(bfd * output_bfd ATTRIBUTE_UNUSED,
-                               struct bfd_link_info * info ATTRIBUTE_UNUSED,
-                               struct elf_link_hash_entry * h ATTRIBUTE_UNUSED,
+                               struct bfd_link_info * info,
+                               struct elf_link_hash_entry * h,
                                Elf_Internal_Sym *sym ATTRIBUTE_UNUSED)
 {
+  struct elf_link_hash_table *htab;
+
+  if (!h->needs_plt) return true;
+
 #ifdef DEBUG
   const char * sym_name;
   sym_name = h->root.root.string;
   fprintf(stderr, "finish_dynamic_symbol for %s in %s\n",
 		      sym_name, bfd_get_filename(output_bfd));
 #endif
+
+  htab = elf_hash_table (info);
+  i370_plink_entry_build(htab, h);
   return true;
 }
 
