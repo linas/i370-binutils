@@ -367,11 +367,10 @@ i370_elf_merge_private_bfd_data (bfd *ibfd, struct bfd_link_info *info)
   return true;
 }
 
-/* Handle an i370 specific section when reading an object file.  This
-   is called when elfcode.h finds a section with an unknown type.  */
-/* XXX hack alert bogus This routine is mostly all junk and almost
-   certainly does the wrong thing.  Its here simply because it does
-   just enough to allow glibc-2.1 ld.so to compile & link.  */
+/* Handle an i370-specific section when reading an object file.  This
+   is called when elfcode.h finds a section with an unknown type.
+   Currently this is never called!? Implementation below is what most
+   other arches do... !? Maybe we can gut this out to nothing!? */
 
 static bool
 i370_elf_section_from_shdr (bfd *abfd,
@@ -381,6 +380,11 @@ i370_elf_section_from_shdr (bfd *abfd,
 {
   asection *newsect;
   flagword flags;
+
+#ifdef DEBUG
+  fprintf(stderr, "section_from_shdr called for %s (%d) in %s\n",
+    name, shindex, bfd_get_filename(abfd));
+#endif
 
   if (! _bfd_elf_make_section_from_shdr (abfd, hdr, name, shindex))
     return false;
@@ -395,15 +399,17 @@ i370_elf_section_from_shdr (bfd *abfd,
 }
 
 /* Set up any other section flags and such that may be necessary.  */
-/* XXX hack alert bogus This routine is mostly all junk and almost
-   certainly does the wrong thing.  Its here simply because it does
-   just enough to allow glibc-2.1 ld.so to compile & link.  */
 
 static bool
 i370_elf_fake_sections (bfd *abfd ATTRIBUTE_UNUSED,
 			Elf_Internal_Shdr *shdr,
 			asection *asect)
 {
+#ifdef DEBUG
+  fprintf(stderr, "fake_sections called for %s in %s\n",
+    bfd_section_name(asect), bfd_get_filename(abfd));
+#endif
+
   if ((asect->flags & (SEC_GROUP | SEC_EXCLUDE)) == SEC_EXCLUDE)
     shdr->sh_flags |= SHF_EXCLUDE;
 
@@ -413,7 +419,11 @@ i370_elf_fake_sections (bfd *abfd ATTRIBUTE_UNUSED,
   return true;
 }
 
-/* Create the .data.pool section that will hold TOC entries.
+/* Create the .data.plink section that will hold PLT entries.
+   We give this a non-standard name for the moment, because the
+   i370 glue is non-standard/unusual. But it does look like a PLT
+   in the overall general sense.
+
    TODO: might also need .dynsbss and .rela.sbss and maybe other things
    stolen from _bfd_elf_create_dynamic_sections. Under construction,
    not everything works yet.
@@ -446,13 +456,12 @@ i370_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
   return true;
 }
 
-/* Look through the relocs for a section during the first phase, and
-   allocate space in the global offset table or procedure linkage
-   table.  */
-/* XXX hack alert bogus This routine is mostly all junk and almost
-   certainly does the wrong thing.  Its here simply because it does
-   just enough to allow glibc-2.1 ld.so to compile & link.  */
+/* Look through the relocs for an input section, and allocate space
+   for that reloc.  This is called for each input bfd, one by one,
+   and so anything we see here might be provided by later sections.
 
+   Under construction. Might not do the right thing.
+ */
 static bool
 i370_elf_check_relocs (bfd *abfd,
 		       struct bfd_link_info *info,
@@ -466,19 +475,34 @@ i370_elf_check_relocs (bfd *abfd,
   const Elf_Internal_Rela *rel_end;
   asection *sreloc;
 
+#ifdef DEBUG
+  fprintf(stderr,
+      "check_relocs called for %s in %s is-reloc=%d is-pic=%d nrelocs=%u\n",
+       bfd_section_name(sec), bfd_get_filename(abfd),
+       bfd_link_relocatable (info), bfd_link_pic (info), sec->reloc_count);
+#endif
+
+  /* If not a relocatable object, there's nothing to do. */
   if (bfd_link_relocatable (info))
     return true;
 
-#ifdef DEBUG
-  _bfd_error_handler ("i370_elf_check_relocs called for section %pA in %pB",
-		      sec, abfd);
-#endif
+  /* If we're not looking at a PIC object, there's nothing to do. */
+  if (!bfd_link_pic (info))
+    return true;
+
+  /* If there aren't any relocations, there's nothing to do. */
+  /* This is probably an error condition... */
+  if (0 == sec->reloc_count)
+    return true;
 
   dynobj = elf_hash_table (info)->dynobj;
   symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
   sym_hashes = elf_sym_hashes (abfd);
 
-  sreloc = NULL;
+  sreloc = _bfd_elf_make_dynamic_reloc_section
+                   (sec, dynobj, 2, abfd, /*rela?*/ true);
+
+  if (sreloc == NULL) return false;
 
   rel_end = relocs + sec->reloc_count;
   for (rel = relocs; rel < rel_end; rel++)
@@ -488,7 +512,7 @@ i370_elf_check_relocs (bfd *abfd,
 
       r_symndx = ELF32_R_SYM (rel->r_info);
       if (r_symndx < symtab_hdr->sh_info)
-	h = NULL;
+        h = NULL;
       else
 	{
 	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
@@ -497,26 +521,13 @@ i370_elf_check_relocs (bfd *abfd,
 	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
 	}
 
-      if (bfd_link_pic (info))
-	{
 #ifdef DEBUG
-	  /* if (h && h->root.root.string) */
-	  fprintf (stderr,
-		   "i370_elf_check_relocs needs to create relocation for %s\n",
-		   (h && h->root.root.string)
-		   ? h->root.root.string : "<unknown>");
+      fprintf (stderr,
+	   "i370_elf_check_relocs: dynamic relocation needed for %s\n",
+	   (h && h->root.root.string)
+	   ? h->root.root.string : "<unknown>");
 #endif
-	  if (sreloc == NULL)
-	    {
-	      sreloc = _bfd_elf_make_dynamic_reloc_section
-		(sec, dynobj, 2, abfd, /*rela?*/ true);
-
-	      if (sreloc == NULL)
-		return false;
-	    }
-
-	  sreloc->size += sizeof (Elf32_External_Rela);
-	}
+      sreloc->size += sizeof (Elf32_External_Rela);
     }
 
   return true;
@@ -545,8 +556,8 @@ i370_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
   asection *ss = h->root.u.def.section;
   bfd_vma loco = ss->vma + h->root.u.def.value;
   fprintf (stderr,
-     "i370_adjust_dynamic in %s off %lx at %lx sym= %s\n",
-	   bfd_section_name(ss), ss->output_offset, loco, h->root.root.string);
+     "i370_adjust_dynamic in %s at %lx sym= %s\n",
+	   bfd_section_name(ss), loco, h->root.root.string);
 #endif
 
   /* Make sure we know what is going on here.  */
@@ -559,6 +570,15 @@ i370_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
 
   s = bfd_get_linker_section (dynobj, ".data.plink");
   BFD_ASSERT (s != NULL);
+
+  /* We'll be copying the dynamic objects .data.pool entry to
+     the output objects "local" .data.plink section. FWIW these
+     are both effectively .plt entries but are used in a rather
+     non-conventional way, so get different names. */
+  h->needs_plt = 1;
+
+  /* s->size += sizeof (i370_pool_entry); */
+  s->size += 32; /* hack till we figure out wtf */
 
   return true;
 
@@ -628,7 +648,7 @@ i370_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
 #endif
 }
 
-/* Allocate space in .data.pool for dynamic relocs.
+/* Allocate space in .data.plink for dynamic relocs.
    Called by late_size_sections.  */
 
 static bool
@@ -638,9 +658,14 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void * inf)
   struct elf_link_hash_table *htab;
   struct elf_dyn_relocs *p;
 
-#ifdef XDEBUG
-  fprintf(stderr, "allocate_dynrelocs for %s %s\n",
-          bfd_section_name(h->root.u.def.section), h->root.root.string);
+  /* Don't bother if nothing is needed */
+  if (h->plt.refcount < 0)
+    return true;
+
+#ifdef DEBUG
+  fprintf(stderr, "allocate_dynrelocs for %s %s for %p\n",
+          bfd_section_name(h->root.u.def.section), h->root.root.string,
+          h->dyn_relocs);
 #endif
 
   if (h->root.type == bfd_link_hash_indirect)
@@ -651,27 +676,10 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void * inf)
   if (htab == NULL)
     return false;
 
-  if (htab->dynamic_sections_created
-      && h->plt.refcount > 0)
-    {
-// Needs to be implemented
-abort();
-    }
-  else
-    {
-      h->plt.offset = (bfd_vma) -1;
-      h->needs_plt = 0;
-    }
+  if (0 == htab->dynamic_sections_created)
+    return true;
 
-  if (h->got.refcount > 0)
-    {
-// Needs to be implemented
-abort();
-    }
-  else
-    h->got.offset = (bfd_vma) -1;
-
-  /* Finally, allocate space.  */
+  /* Allocate space.  */
   for (p = h->dyn_relocs; p != NULL; p = p->next)
     {
       asection *sreloc = elf_section_data (p->sec)->sreloc;
@@ -741,7 +749,6 @@ i370_elf_late_size_sections (bfd *output_bfd,
   /* Set up space for local dynamic relocs. */
   for (ibfd = info->input_bfds; ibfd != NULL; ibfd = ibfd->link.next)
     {
-      bfd_signed_vma *local_got;
       asection *srel;
 
       for (s = ibfd->sections; s != NULL; s = s->next)
@@ -764,10 +771,6 @@ i370_elf_late_size_sections (bfd *output_bfd,
 		}
 	    }
 	}
-
-      // Needs to be implemented
-      local_got = elf_local_got_refcounts (ibfd);
-      if (local_got) abort();
     }
 
   /* Allocate space for global sym dynamic relocs. */
@@ -786,8 +789,7 @@ i370_elf_late_size_sections (bfd *output_bfd,
       /* It's OK to base decisions on the section name, because none
 	 of the dynobj section names depend upon the input files.  */
       name = bfd_section_name (s);
-
-      if (strcmp (name, ".plt") == 0)
+      if (strcmp (name, ".data.plink") == 0)
 	{
 	  /* Remember whether there is a PLT.  */
 	  plt = s->size != 0;
@@ -828,15 +830,10 @@ i370_elf_late_size_sections (bfd *output_bfd,
 
       if (s->size == 0)
 	{
-	  /* If we don't need this section, strip it from the
-	     output file.  This is mostly to handle .rela.bss and
-	     .rela.plt.  We must create both sections in
-	     create_dynamic_sections, because they must be created
-	     before the linker maps input sections to output
-	     sections.  The linker does that before
-	     adjust_dynamic_symbol is called, and it is that
-	     function which decides whether anything needs to go
-	     into these sections.  */
+	  /* If we don't need this section, strip it from the output
+	     file.  This is for the .rela.bss and .rela.pool sections,
+	     which might get created in create_dynamic_sections() but
+	     are then never populated in adjust_dynamic_symbol().  */
 	  s->flags |= SEC_EXCLUDE;
 	  continue;
 	}
@@ -855,6 +852,7 @@ i370_elf_late_size_sections (bfd *output_bfd,
      must add the entries now so that we get the correct size for
      the .dynamic section.  The DT_DEBUG entry is filled in by the
      dynamic linker and used by the debugger.  */
+/* Currently unused/un-needed, due to unfinished implementation?! */
   return _bfd_elf_add_dynamic_tags (output_bfd, info, relocs|plt|reltext);
 }
 
@@ -905,10 +903,9 @@ i370_elf_relocate_section (bfd *output_bfd,
   bool ret = true;
 
 #ifdef DEBUG
-  _bfd_error_handler ("i370_elf_relocate_section called for %pB section %pA, %u relocations%s",
-		      input_bfd, input_section,
-		      input_section->reloc_count,
-		      (bfd_link_relocatable (info)) ? " (relocatable)" : "");
+  fprintf(stderr, "relocate_section for %s with %u relocs in %s\n",
+          bfd_section_name(input_section), input_section->reloc_count,
+          bfd_get_filename(input_bfd));
 #endif
 
   if (!i370_elf_howto_table[ R_I370_ADDR31 ])
@@ -967,6 +964,7 @@ i370_elf_relocate_section (bfd *output_bfd,
 	  while (h->root.type == bfd_link_hash_indirect
 		 || h->root.type == bfd_link_hash_warning)
 	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
+
 	  sym_name = h->root.root.string;
 	  if (h->root.type == bfd_link_hash_defined
 	      || h->root.type == bfd_link_hash_defweak)
@@ -1200,7 +1198,7 @@ i370_elf_relocate_section (bfd *output_bfd,
 	}
 
 #ifdef DEBUG
-      fprintf (stderr, "\ttype = %s (%d), name = %s, symbol index = %ld, offset = %lx, addend = %lx\n",
+      fprintf (stderr, "   type = %s (%d), name = %s, symindex = %ld, off = %lx, addend = %lx\n",
 	       howto->name,
 	       (int)r_type,
 	       sym_name,
@@ -1268,8 +1266,8 @@ i370_elf_finish_dynamic_symbol(bfd * output_bfd ATTRIBUTE_UNUSED,
 #ifdef DEBUG
   const char * sym_name;
   sym_name = h->root.root.string;
-  _bfd_error_handler ("i370_elf_finish_dynamic_symbol called for %s in %pB ",
-		      sym_name, output_bfd);
+  fprintf(stderr, "finish_dynamic_symbol for %s in %s\n",
+		      sym_name, bfd_get_filename(output_bfd));
 #endif
 	return true;
 }
