@@ -453,6 +453,10 @@ i370_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
     return false;
   htab->srelplt = s;
 
+  /* .rela.pool holds the relocations that are needed for .data.plink
+     Specifically, the location of the page table and the pool table.  */
+  elf_section_data (htab->splt)->sreloc = s;
+
   return true;
 }
 
@@ -578,7 +582,7 @@ i370_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
   h->needs_plt = 1;
 
   /* s->size += sizeof (i370_pool_entry); */
-  s->size += 32; /* hack till we figure out wtf */
+  s->size += 48; /* hack till we figure out wtf */
 
   return true;
 
@@ -648,36 +652,45 @@ i370_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
 #endif
 }
 
-/* Allocate space in .data.plink for dynamic relocs.
+/* Allocate space in .rela.pool for dynamic relocs.
    Called by late_size_sections.  */
 
 static bool
-allocate_dynrelocs (struct elf_link_hash_entry *h, void * inf)
+allocate_dynrelocs (struct elf_link_hash_entry *h, void * goober)
 {
-  struct bfd_link_info *info;
-  struct elf_link_hash_table *htab;
-  struct elf_dyn_relocs *p;
+  struct elf_link_hash_table *htab = goober;
+  struct elf_dyn_relocs *p, **head;
 
   /* Don't bother if nothing is needed */
-  if (h->plt.refcount < 0)
+  if (!h->needs_plt)
     return true;
 
 #ifdef DEBUG
-  fprintf(stderr, "allocate_dynrelocs for %s %s for %p\n",
-          bfd_section_name(h->root.u.def.section), h->root.root.string,
-          h->dyn_relocs);
+  fprintf(stderr, "allocate_dynrelocs for %s %s\n",
+          bfd_section_name(h->root.u.def.section), h->root.root.string);
 #endif
 
   if (h->root.type == bfd_link_hash_indirect)
     return true;
 
-  info = (struct bfd_link_info *) inf;
-  htab = elf_hash_table (info);
-  if (htab == NULL)
-    return false;
-
+  /* This should never happen. */
   if (0 == htab->dynamic_sections_created)
     return true;
+
+  /* Section was .data.pool, will be .data.plink */
+  h->root.u.def.section = htab->splt;
+  h->root.u.def.value = 0;
+
+  size_t amt = sizeof(struct elf_dyn_relocs);
+  p = ((struct elf_dyn_relocs *) bfd_alloc (htab->dynobj, amt));
+  if (p == NULL) return false;
+
+  head = &h->dyn_relocs;
+  p->next = *head;
+  *head = p;
+  p->sec = htab->splt;
+  p->count = 2;   /* Hack alert. Should be funcname@pool, etc. */
+  p->pc_count = 0;
 
   /* Allocate space.  */
   for (p = h->dyn_relocs; p != NULL; p = p->next)
@@ -774,7 +787,8 @@ i370_elf_late_size_sections (bfd *output_bfd,
     }
 
   /* Allocate space for global sym dynamic relocs. */
-  elf_link_hash_traverse (elf_hash_table (info), allocate_dynrelocs, info);
+  struct elf_link_hash_table *htab = elf_hash_table (info);
+  elf_link_hash_traverse (elf_hash_table (info), allocate_dynrelocs, htab);
 
   /* The check_relocs and adjust_dynamic_symbol entry points have
      determined the sizes of the various dynamic sections.  Allocate
@@ -787,7 +801,8 @@ i370_elf_late_size_sections (bfd *output_bfd,
 	continue;
 
       /* It's OK to base decisions on the section name, because none
-	 of the dynobj section names depend upon the input files.  */
+         of the dynobj section names depend upon the input files.  */
+
       name = bfd_section_name (s);
       if (strcmp (name, ".data.plink") == 0)
 	{
@@ -985,8 +1000,8 @@ i370_elf_relocate_section (bfd *output_bfd,
 	      else if (NULL == sec->output_section)
 		{
 		  fprintf(stderr,
-             "Oh no! linker has no output section for %s in %s\n",
-             sym_name, bfd_section_name(sec));
+		      "Oh no! linker has no output section for %s in %s\n",
+		      sym_name, bfd_section_name(sec));
 		}
 	      else
 		relocation = (h->root.u.def.value
@@ -1269,7 +1284,7 @@ i370_elf_finish_dynamic_symbol(bfd * output_bfd ATTRIBUTE_UNUSED,
   fprintf(stderr, "finish_dynamic_symbol for %s in %s\n",
 		      sym_name, bfd_get_filename(output_bfd));
 #endif
-	return true;
+  return true;
 }
 
 /* Finish up the dynamic sections.  */
