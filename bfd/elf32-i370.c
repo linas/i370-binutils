@@ -246,15 +246,24 @@ static reloc_howto_type i370_elf_howto_raw[] =
   Anything linking to `funcname` has to make a copy of this, including
   both the PLT trampoline, the three relocations, the pool table that
   follows, and the page table. Grand total is usually 48 to 160 bytes,
-  but is in cinciple unbounded (can be many Kbytes). The pool table
-  will contain many relocations, either to globals (R_I370_ADDR31)
-  or to locals (R_I370_RELATIVE). We can leave it to the dynamic
-  loader to figure this out, or we can do as much as possible here.
-  Seems wiser to do it here.
+  but is in principle unbounded (can be many Kbytes).
+
+  The pool table will contain many relocations, either to globals
+  (R_I370_ADDR31) or to locals (R_I370_RELATIVE).
+
+  XXX TODO: These need to be copied from the input bfd (in .rela.dyn
+  although it should have been .rela.pool) to the output bfd but
+  I can't figure out how to get my hands on that section.
 
   To lessen debugging confusion, the copy goes into the .data.plink
   section. The (local) relocs that follow go into the .rela.pool
   section.
+
+  Dynamic linking TODO list:
+  -- processing of globals in .data is probably broken ?
+  -- we've ignore weak symbols.
+  -- setup of interpreter is probably wrong
+  -- setup of _DYNAMIC missing/wrong.
  */
 
 /* Initialize the i370_elf_howto_table, so that linear accesses can be done.  */
@@ -690,6 +699,7 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void * goober)
 {
   struct elf_link_hash_table *htab = goober;
   struct elf_dyn_relocs *p, **head;
+  int nrelocs;
 
   /* Don't bother if nothing is needed */
   if (!h->needs_plt)
@@ -707,8 +717,26 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void * goober)
   if (0 == htab->dynamic_sections_created)
     return true;
 
-  /* There are three relocs in the dynamic linkage. Allocate space
-     for them.  XXX This is wrong, but a placeholder fow now. */
+  /* We will be copying data.pool glue later. It contains relocs.
+     It would be nice if we could look these over and count them.
+     But I can't figure out how to do that. They're in .rela.dyn
+     but I can't get my grubby little hands on that section.
+
+     Anyway, they should have been in .rela.pool not .rela.dyn
+     so that's another broken-ness.
+
+     The glue is at h->root.u.def.value in the h->root.u.def.section,
+     it has length h->size. The worst-case estimate is that all of
+     them are relocs, for a worst-case estimate of (h->size-20)/4 of
+     them. -20 for the linkage+stacksize+reserved bytes.  */
+  nrelocs = (h->size - 20) / 4;
+
+  if (h->dyn_relocs)
+    printf("Oh no!!! Already have dynrelocs! I don't know what to do!\n");
+
+  /* Make a worst-case estimate for the number of relocs in the
+     dynamic linkage. Allocate space for them.  XXX FIXME This is
+     blunt force; I can't find a better way. */
   size_t amt = sizeof(struct elf_dyn_relocs);
   p = ((struct elf_dyn_relocs *) bfd_alloc (htab->dynobj, amt));
   if (p == NULL) return false;
@@ -717,7 +745,7 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void * goober)
   p->next = *head;
   *head = p;
   p->sec = htab->splt;
-  p->count = 3; /* A totally bogus number TODO */
+  p->count = nrelocs;
   p->pc_count = 0;
 
   /* Allocate space.  */
@@ -813,6 +841,7 @@ i370_elf_late_size_sections (bfd *output_bfd,
 	    }
 	}
     }
+
 
   /* Allocate space for global sym dynamic relocs. */
   struct elf_link_hash_table *htab = elf_hash_table (info);
@@ -1193,7 +1222,7 @@ i370_elf_relocate_section (bfd *output_bfd,
 		    no sreloc->contents for it. I think this is because
 		    there are literals in the debug sections, but
 		    i370_elf_check_relocs() was never called for those.
-		    Either this is he right behavior, or we have to call
+		    Either this is the right behavior, or we have to call
 		    i370_elf_check_relocs() on stripped debug sections,
 		    anyway. I dunno. grep for strip_debugger in
 		    _bfd_elf_link_iterate_on_relocs() */
@@ -1431,7 +1460,7 @@ i370_elf_finish_dynamic_sections (bfd *output_bfd,
       for (; dyncon < dynconend; dyncon++)
 	{
 	  Elf_Internal_Dyn dyn;
-	  asection *s;
+	  asection *s = NULL;
 	  bool size;
 
 	  bfd_elf32_swap_dyn_in (dynobj, dyncon, &dyn);
@@ -1445,10 +1474,6 @@ i370_elf_finish_dynamic_sections (bfd *output_bfd,
 	    case DT_PLTRELSZ:
 	      s = elf_hash_table (info)->srelplt;
 	      size = true;
-	      break;
-	    case DT_JMPREL:
-	      s = elf_hash_table (info)->srelplt;
-	      size = false;
 	      break;
 	    default:
 	      continue;
@@ -1555,8 +1580,8 @@ i370_elf_finish_dynamic_sections (bfd *output_bfd,
 #define bfd_elf32_bfd_merge_private_bfd_data	i370_elf_merge_private_bfd_data
 #define elf_backend_relocate_section		i370_elf_relocate_section
 
-/* Dynamic loader support is mostly broken; just enough here to be able to
-   link glibc's ld.so without errors.  */
+/* Dynamic loader support is under construction; the stuff here is
+   trying to do the right thing but will be garbled in weird ways.  */
 #define elf_backend_create_dynamic_sections	i370_elf_create_dynamic_sections
 #define elf_backend_init_index_section		_bfd_elf_init_1_index_section
 #define elf_backend_finish_dynamic_sections	i370_elf_finish_dynamic_sections
