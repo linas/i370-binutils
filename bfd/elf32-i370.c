@@ -914,8 +914,7 @@ i370_elf_late_size_sections (bfd *output_bfd,
    and the offsets to the pool and page tables. Generate relocs
    for the assorted entries. */
 static bool
-i370_plink_entry_copy(bfd * pic_bfd,
-                      struct bfd_link_info *info,
+i370_plink_entry_copy(struct bfd_link_info *info,
                       struct elf_link_hash_entry *h)
 {
   struct elf_link_hash_table *htab = elf_hash_table (info);
@@ -937,13 +936,14 @@ i370_plink_entry_copy(bfd * pic_bfd,
   printf("plink_entry_copy from %lx + %lx to %lx size %lx name= %s\n",
          s->vma, from_loc, offset, h->size, h->root.root.string);
   printf("from section s=%s in %s\n", bfd_section_name(s),
-        bfd_get_filename(pic_bfd));
+        bfd_get_filename(s->owner));
 #endif
 
   /* Update so it points at the new location, not the old. */
+  h->root.u.def.section = splt;
   h->root.u.def.value = offset;
 
-  return bfd_get_section_contents(pic_bfd, s, to_loc, from_loc, h->size);
+  return bfd_get_section_contents(s->owner, s, to_loc, from_loc, h->size);
 }
 
 /* The RELOCATE_SECTION function is called by the ELF backend linker
@@ -1002,7 +1002,46 @@ i370_elf_relocate_section (bfd *output_bfd,
     /* Initialize howto table if needed.  */
     i370_elf_howto_init ();
 
-  for (; rel < relend; rel++)
+  /* Preliminary pass. Look for objects sitting in PIC sections
+     that need to be copied to the output section. Copy the PIC
+     glue. */
+  for (rel = relocs; rel < relend; rel++)
+    {
+      unsigned long r_symndx;
+      struct elf_link_hash_entry * h;
+      asection *sec;
+
+      r_symndx = ELF32_R_SYM (rel->r_info);
+      if (r_symndx < symtab_hdr->sh_info)
+        continue;
+      h = sym_hashes[r_symndx - symtab_hdr->sh_info];
+      if (h->root.type != bfd_link_hash_defined)
+        continue;
+      sec = h->root.u.def.section;
+      if (sec->output_section)
+        continue;
+      if (!h->needs_plt)
+	{
+	  _bfd_error_handler ("%pA: no output section for symbol %s",
+	                      sec, h->root.root.string);
+	  ret = false;
+	  continue;
+	}
+      if (!i370_plink_entry_copy(info, h))
+	{
+	  _bfd_error_handler (
+	      "%pA: failed plt copy for symbol %s",
+	      sec, h->root.root.string);
+	  ret = false;
+	}
+    }
+
+#ifdef DEBUG
+  fprintf (stderr, "\n");
+#endif
+
+  /* Main loop/pass */
+  for (rel = relocs; rel < relend; rel++)
     {
       enum i370_reloc_type r_type    = (enum i370_reloc_type) ELF32_R_TYPE (rel->r_info);
       bfd_vma offset		     = rel->r_offset;
@@ -1061,28 +1100,6 @@ i370_elf_relocate_section (bfd *output_bfd,
 	    {
 	      sec = h->root.u.def.section;
 
-	      /* If no output section, then this must still be the
-	         input .data.pool. Swap it out for .data.plink. */
-	      if (NULL == sec->output_section)
-		{
-		  if (h->needs_plt)
-		    {
-		      if (!i370_plink_entry_copy(sec->owner, info, h))
-			{
-			  _bfd_error_handler (
-			      "%pA: failed plt copy for symbol %s",
-			      sec, sym_name);
-			  ret = false;
-			}
-		      sec = elf_hash_table (info)->splt;
-		      h->root.u.def.section = sec;
-		    }
-		  else
-		    _bfd_error_handler (
-		      "%pA: not output for symbol %s",
-		      sec, sym_name);
-		}
-
 	      /* In these cases, we don't need the relocation value. */
 	      if (bfd_link_pic (info)
 		  && ((! info->symbolic && h->dynindx != -1)
@@ -1093,6 +1110,13 @@ i370_elf_relocate_section (bfd *output_bfd,
 		      || r_type == R_I370_ADDR16
 		      || r_type == R_I370_RELATIVE))
 		{}
+	      else if (NULL == sec->output_section)
+		{
+		  _bfd_error_handler ("%pA: no output for symbol %s",
+		                      sec, sym_name);
+		  ret = false;
+		  continue;
+		}
 	      else
 		relocation = (h->root.u.def.value
 			      + sec->output_section->vma
