@@ -928,12 +928,12 @@ i370_plink_entry_copy(bfd * pic_bfd,
   if (to_loc[0]) return true;
 
   bfd_vma from_loc = h->root.u.def.value;
+  asection *s = h->root.u.def.section;
 #ifdef DEBUG
   /* h->root.u.def.section->vma points at the start of .data.pool
      in the input shared object where the function symbol is defined.
      The h->root.u.def.value is the offset to the entry for the
      function.  */
-  asection *s = h->root.u.def.section;
   printf("plink_entry_copy from %lx + %lx to %lx size %lx name= %s\n",
          s->vma, from_loc, offset, h->size, h->root.root.string);
   printf("from section s=%s in %s\n", bfd_section_name(s),
