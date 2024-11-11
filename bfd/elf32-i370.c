@@ -225,6 +225,48 @@ static reloc_howto_type i370_elf_howto_raw[] =
 
 };
 
+/* The i370 compiler emits the following glue for PIC functions:
+
+   .section .data.pool
+   funcname:
+      ST r12,68(r11)       addr  0:  save r12 in frame
+      L  r12,12(r15)       addr  4:  load addr of funcname$fent
+      BR r12               addr  8:  branch to funcname$fent
+      .short 0             addr 10:  padding
+      .long funcname$fent  addr 12:  addr of function in text section
+      .long funcname$pool  addr 16:  location of literal pool
+      .long stacksize      addr 20:  size of stackframe
+      .long funcname$pgt   addr 24:  location of page table (for branches)
+      .long 0              addr 28:  unused; resereved
+
+  It is a combined PLT & GOT: the instructions are PLT-like, and the
+  three addresses are GOT-like. It's combined because r15 provides the
+  indes into the GOT (which is why no additional GOT is needed.)
+
+  Anything linking to `funcname` has to make a copy of this, including
+  both the PLT trampoline, the three relocations, the pool table that
+  follows, and the page table. Grand total is usually 48 to 160 bytes.
+
+  To lessen debugging confusion, the copy goes into the .data.plink
+  section. The (local) relocs that follow go into the .rela.pool
+  section.
+ */
+
+/* Total size of of above entry. */
+#define PLINK_ENTRY_SIZE 32
+
+/* Total number of relocs in the entry. */
+#define PLINK_RELOCS 3
+
+#define PLINK_INTRO_SIZE 12
+const bfd_byte plink_code[PLINK_INTRO_SIZE] = {
+  0x50, 0xc0, 0xb0, 0x44, /* ST  r12,68(,r11) */
+  0x58, 0xc0, 0xf0, 0x0c, /* L   r12,12(,r15) */
+  0x07, 0xfc,             /* BR   r12 */
+  0x07, 0x00              /* NOOP for alignment */
+};
+
+
 /* Initialize the i370_elf_howto_table, so that linear accesses can be done.  */
 
 static void
@@ -539,29 +581,27 @@ i370_elf_check_relocs (bfd *abfd,
 
 /* Adjust a symbol defined by a dynamic object and referenced by a
    regular object.  The current definition is in some section of the
-   dynamic object, but we're not including those sections.  We have to
-   change the definition to something the rest of the link can
-   understand.  */
-/* XXX hack alert bogus This routine is mostly all junk and almost
-   certainly does the wrong thing.  Its here simply because it does
-   just enough to allow glibc-2.1 ld.so to compile & link.  */
+   dynamic object, but those sections are not being copied to the
+   output bfd.  This function provides an opportunity to tweak the
+   symbol as needed.  */
 
 static bool
 i370_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
 				struct elf_link_hash_entry *h)
 {
-  bfd *dynobj = elf_hash_table (info)->dynobj;
-  asection *s;
+  struct elf_link_hash_table *htab = elf_hash_table (info);
+  bfd *dynobj = htab->dynobj;
 
 #ifdef DEBUG
   /* h->root.u.def.section->vma points at the start of .data.pool
      (in the input shared object.) The h->root.u.def.value is the
      offset to the entry for the function.  */
-  asection *ss = h->root.u.def.section;
-  bfd_vma loco = ss->vma + h->root.u.def.value;
+  asection *sin = h->root.u.def.section;
+  bfd_vma loco = sin->vma + h->root.u.def.value;
+
   fprintf (stderr,
-     "i370_adjust_dynamic in %s at %lx sym= %s\n",
-	   bfd_section_name(ss), loco, h->root.root.string);
+     "i370_adjust_dynamic in %s at %lx size=%lx sym= %s\n",
+      bfd_section_name(sin), loco, h->size, h->root.root.string);
 #endif
 
   /* Make sure we know what is going on here.  */
@@ -572,8 +612,9 @@ i370_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
 		      && h->ref_regular
 		      && !h->def_regular)));
 
-  s = bfd_get_linker_section (dynobj, ".data.plink");
-  BFD_ASSERT (s != NULL);
+  asection *splt = bfd_get_linker_section (dynobj, ".data.plink");
+  BFD_ASSERT (splt != NULL);
+  BFD_ASSERT (splt == htab->splt);
 
   /* We'll be copying the dynamic objects .data.pool entry to
      the output objects "local" .data.plink section. FWIW these
@@ -581,15 +622,14 @@ i370_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
      non-conventional way, so get different names. */
   h->needs_plt = 1;
 
-  h->plt.offset = s->size;
-  /* s->size += sizeof (i370_pool_entry); */
-  s->size += 48; /* hack till we figure out wtf */
+  /* The total size is a sum of the glue, plus $pool plus $pgt,
+     typically 48 to maybe 160 bytes, depending. */
+  h->plt.offset = splt->size;
+  splt->size += h->size;
 
   return true;
 
 #ifdef NOT_YET_MAYBE_NEVER
-  s->size += sizeof (Elf32_External_Rela);
-
   /* If this is a weak symbol, and there is a real definition, the
      processor independent code will have arranged for us to see the
      real definition first, and we can just use the same value.  */
@@ -655,7 +695,6 @@ i370_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
 
 /* Allocate space in .rela.pool for dynamic relocs.
    Called by late_size_sections.  */
-
 static bool
 allocate_dynrelocs (struct elf_link_hash_entry *h, void * goober)
 {
@@ -678,10 +717,8 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void * goober)
   if (0 == htab->dynamic_sections_created)
     return true;
 
-  /* Section was .data.pool, will be .data.plink */
-  h->root.u.def.section = htab->splt;
-  h->root.u.def.value = 0;
-
+  /* There are three relocs in the dynamic linkage. Allocate space
+     for them.  XXX This is wrong, but a placeholder fow now. */
   size_t amt = sizeof(struct elf_dyn_relocs);
   p = ((struct elf_dyn_relocs *) bfd_alloc (htab->dynobj, amt));
   if (p == NULL) return false;
@@ -690,7 +727,7 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void * goober)
   p->next = *head;
   *head = p;
   p->sec = htab->splt;
-  p->count = 2;   /* Hack alert. Should be funcname@pool, etc. */
+  p->count = PLINK_RELOCS;
   p->pc_count = 0;
 
   /* Allocate space.  */
@@ -872,6 +909,40 @@ i370_elf_late_size_sections (bfd *output_bfd,
   return _bfd_elf_add_dynamic_tags (output_bfd, info, relocs|plt|reltext);
 }
 
+/* Copy the entire prolog glue from the PIC object to the .data.plink
+   section. This is the PLT glue, the pointer into the text section,
+   and the offsets to the pool and page tables. Generate relocs
+   for the assorted entries. */
+static bool
+i370_plink_entry_copy(bfd * pic_bfd,
+                      struct bfd_link_info *info,
+                      struct elf_link_hash_entry *h)
+{
+  struct elf_link_hash_table *htab = elf_hash_table (info);
+  asection *splt = htab->splt;
+
+  bfd_vma offset = h->plt.offset;
+  bfd_byte * to_loc = splt->contents + offset;
+
+  /* Done previously? */
+  if (to_loc[0]) return true;
+
+  bfd_vma from_loc = h->root.u.def.value;
+#ifdef DEBUG
+  /* h->root.u.def.section->vma points at the start of .data.pool
+     in the input shared object where the function symbol is defined.
+     The h->root.u.def.value is the offset to the entry for the
+     function.  */
+  asection *s = h->root.u.def.section;
+  printf("plink_entry_copy from %lx + %lx to %lx size %lx name= %s\n",
+         s->vma, from_loc, offset, h->size, h->root.root.string);
+  printf("from section s=%s in %s\n", bfd_section_name(s),
+        bfd_get_filename(pic_bfd));
+#endif
+
+  return bfd_get_section_contents(pic_bfd, s, to_loc, from_loc, h->size);
+}
+
 /* The RELOCATE_SECTION function is called by the ELF backend linker
    to handle the relocations for a section.
 
@@ -987,6 +1058,28 @@ i370_elf_relocate_section (bfd *output_bfd,
 	    {
 	      sec = h->root.u.def.section;
 
+	      /* If no output section, then this must still be the
+	         input .data.pool. Swap it out for .data.plink. */
+	      if (NULL == sec->output_section)
+		{
+		  if (h->needs_plt)
+		    {
+		      if (!i370_plink_entry_copy(sec->owner, info, h))
+			{
+			  _bfd_error_handler (
+			      "%pA: failed plt copy for symbol %s",
+			      sec, sym_name);
+			  ret = false;
+			}
+		      sec = elf_hash_table (info)->splt;
+		      h->root.u.def.section = sec;
+		    }
+		  else
+		    _bfd_error_handler (
+		      "%pA: not output for symbol %s",
+		      sec, sym_name);
+		}
+
 	      /* In these cases, we don't need the relocation value. */
 	      if (bfd_link_pic (info)
 		  && ((! info->symbolic && h->dynindx != -1)
@@ -997,13 +1090,6 @@ i370_elf_relocate_section (bfd *output_bfd,
 		      || r_type == R_I370_ADDR16
 		      || r_type == R_I370_RELATIVE))
 		{}
-	      /* Else sometimes the output section is null !?? */
-	      else if (NULL == sec->output_section)
-		{
-		  fprintf(stderr,
-		      "Oh no! linker has no output section for %s in %s\n",
-		      sym_name, bfd_section_name(sec));
-		}
 	      else
 		relocation = (h->root.u.def.value
 			      + sec->output_section->vma
@@ -1214,15 +1300,13 @@ i370_elf_relocate_section (bfd *output_bfd,
 	}
 
 #ifdef DEBUG
-      fprintf (stderr, "   type = %s (%d), name = %s, symindex = %ld, off = %lx, addend = %lx\n",
+      fprintf (stderr, "   type= %s symndx= %ld off= %3lx add= %3lx sym= %s\n",
 	       howto->name,
-	       (int)r_type,
-	       sym_name,
 	       r_symndx,
 	       (long) offset,
-	       (long) addend);
+	       (long) addend,
+	       sym_name);
 #endif
-
       r = _bfd_final_link_relocate (howto, input_bfd, input_section, contents,
 				    offset, relocation, addend);
 
@@ -1273,71 +1357,27 @@ i370_elf_relocate_section (bfd *output_bfd,
   return ret;
 }
 
-/* The i370 compiler emits the following glue for PIC functions:
-
-   .section .data.pool
-   funcname:
-      ST r12,68(r11)       addr  0:  save r12 in frame
-      L  r12,12(r15)       addr  4:  load addr of funcname$fent
-      BR r12               addr  8:  branch to funcname$fent
-      .short 0             addr 10:  padding
-      .long funcname$fent  addr 12:  addr of function in text section
-      .long funcname$pool  addr 16:  location of literal pool
-      .long stacksize      addr 20:  size of stackframe
-      .long funcname$pgt   addr 24:  location of page table (for branches)
-      .long 0              addr 28:  unused; resereved
-
-  It is a combined PLT & GOT: the instructions are PLT-like, and the
-  three addresses are GOT-like. It's combined because r15 provides the
-  indes into the GOT (which is why no additional GOT is needed.)
-
-  Anything linking to `funcname` has to make a copy of this, including
-  both the PLT trampoline and the three relocations. To avoid confusion
-  (increase confusion?) the copy goes into .data.plink and the three
-  relocs go into .rela.pool.
- */
-
-#define PLINK_INTRO_SIZE 12
-const bfd_byte plink_code[PLINK_INTRO_SIZE] = {
-  0x50, 0xc0, 0xb0, 0x44, /* ST  r12,68(,r11) */
-  0x58, 0xc0, 0xf0, 0x0c, /* L   r12,12(,r15) */
-  0x07, 0xfc,             /* BR   r12 */
-  0x07, 0x00              /* NOOP for alignment */
-};
-
-// xxxxxxxxxx
-static void
-i370_plink_entry_build(struct elf_link_hash_table *htab,
-                       struct elf_link_hash_entry * h)
-{
-  bfd_vma offset = h->plt.offset;
-
-  asection *splt = htab->splt;
-  memcpy(splt->contents + offset, plink_code, PLINK_INTRO_SIZE);
-}
-
-
 /* Finish up dynamic symbol handling. Set the contents of the various
    dynamic sections.  */
 static bool
 i370_elf_finish_dynamic_symbol(bfd * output_bfd ATTRIBUTE_UNUSED,
-                               struct bfd_link_info * info,
+                               struct bfd_link_info * info ATTRIBUTE_UNUSED,
                                struct elf_link_hash_entry * h,
                                Elf_Internal_Sym *sym ATTRIBUTE_UNUSED)
 {
-  struct elf_link_hash_table *htab;
-
   if (!h->needs_plt) return true;
 
 #ifdef DEBUG
-  const char * sym_name;
-  sym_name = h->root.root.string;
-  fprintf(stderr, "finish_dynamic_symbol for %s in %s\n",
-		      sym_name, bfd_get_filename(output_bfd));
+  /* sym->st_shndx is the index of the section the symbol is in.
+     It should usually be the index for .data.plink.
+     sym->st_name is the index into the .dynsym section.
+     sym->st_size == h->size when all is well.  */
+  fprintf(stderr,
+     "finish_dyn_symb at %lx size %lx dynidx %ld shndx %u in %s symb %s\n",
+     sym->st_value, sym->st_size, sym->st_name, sym->st_shndx,
+     bfd_get_filename(output_bfd), h->root.root.string);
 #endif
 
-  htab = elf_hash_table (info);
-  i370_plink_entry_build(htab, h);
   return true;
 }
 
