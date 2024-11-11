@@ -245,27 +245,17 @@ static reloc_howto_type i370_elf_howto_raw[] =
 
   Anything linking to `funcname` has to make a copy of this, including
   both the PLT trampoline, the three relocations, the pool table that
-  follows, and the page table. Grand total is usually 48 to 160 bytes.
+  follows, and the page table. Grand total is usually 48 to 160 bytes,
+  but is in cinciple unbounded (can be many Kbytes). The pool table
+  will contain many relocations, either to globals (R_I370_ADDR31)
+  or to locals (R_I370_RELATIVE). We can leave it to the dynamic
+  loader to figure this out, or we can do as much as possible here.
+  Seems wiser to do it here.
 
   To lessen debugging confusion, the copy goes into the .data.plink
   section. The (local) relocs that follow go into the .rela.pool
   section.
  */
-
-/* Total size of of above entry. */
-#define PLINK_ENTRY_SIZE 32
-
-/* Total number of relocs in the entry. */
-#define PLINK_RELOCS 3
-
-#define PLINK_INTRO_SIZE 12
-const bfd_byte plink_code[PLINK_INTRO_SIZE] = {
-  0x50, 0xc0, 0xb0, 0x44, /* ST  r12,68(,r11) */
-  0x58, 0xc0, 0xf0, 0x0c, /* L   r12,12(,r15) */
-  0x07, 0xfc,             /* BR   r12 */
-  0x07, 0x00              /* NOOP for alignment */
-};
-
 
 /* Initialize the i370_elf_howto_table, so that linear accesses can be done.  */
 
@@ -727,7 +717,7 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void * goober)
   p->next = *head;
   *head = p;
   p->sec = htab->splt;
-  p->count = PLINK_RELOCS;
+  p->count = 3; /* A totally bogus number TODO */
   p->pc_count = 0;
 
   /* Allocate space.  */
