@@ -940,6 +940,9 @@ i370_plink_entry_copy(bfd * pic_bfd,
         bfd_get_filename(pic_bfd));
 #endif
 
+  /* Update so it points at the new location, not the old. */
+  h->root.u.def.value = offset;
+
   return bfd_get_section_contents(pic_bfd, s, to_loc, from_loc, h->size);
 }
 
