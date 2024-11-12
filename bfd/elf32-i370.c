@@ -353,60 +353,6 @@ i370_elf_info_to_howto (bfd *abfd ATTRIBUTE_UNUSED,
   cache_ptr->howto = i370_elf_howto_table[r_type];
   return cache_ptr->howto != NULL;
 }
-
-/* Hack alert --  the following several routines look generic to me ...
-   why are we bothering with them ?  */
-/* Function to set whether a module needs the -mrelocatable bit set.  */
-
-static bool
-i370_elf_set_private_flags (bfd *abfd, flagword flags)
-{
-  BFD_ASSERT (!elf_flags_init (abfd)
-	      || elf_elfheader (abfd)->e_flags == flags);
-
-  elf_elfheader (abfd)->e_flags = flags;
-  elf_flags_init (abfd) = true;
-  return true;
-}
-
-/* Merge backend specific data from an object file to the output
-   object file when linking.  */
-
-static bool
-i370_elf_merge_private_bfd_data (bfd *ibfd, struct bfd_link_info *info)
-{
-  bfd *obfd = info->output_bfd;
-  flagword old_flags;
-  flagword new_flags;
-
-  if (bfd_get_flavour (ibfd) != bfd_target_elf_flavour
-      || bfd_get_flavour (obfd) != bfd_target_elf_flavour)
-    return true;
-
-  new_flags = elf_elfheader (ibfd)->e_flags;
-  old_flags = elf_elfheader (obfd)->e_flags;
-  if (!elf_flags_init (obfd))	/* First call, no flags set.  */
-    {
-      elf_flags_init (obfd) = true;
-      elf_elfheader (obfd)->e_flags = new_flags;
-    }
-
-  else if (new_flags == old_flags)	/* Compatible flags are ok.  */
-    ;
-
-  else					/* Incompatible flags.  */
-    {
-      _bfd_error_handler
-	/* xgettext:c-format */
-	(_("%pB: uses different e_flags (%#x) fields than previous modules (%#x)"),
-	 ibfd, new_flags, old_flags);
-
-      bfd_set_error (bfd_error_bad_value);
-      return false;
-    }
-
-  return true;
-}
 
 /* Handle an i370-specific section when reading an object file.  This
    is called when elfcode.h finds a section with an unknown type.
@@ -697,7 +643,8 @@ i370_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
 static bool
 allocate_dynrelocs (struct elf_link_hash_entry *h, void * goober)
 {
-  struct elf_link_hash_table *htab = goober;
+  struct bfd_link_info *info = goober;
+  struct elf_link_hash_table *htab = elf_hash_table (info);
   struct elf_dyn_relocs *p, **head;
   int nrelocs;
 
@@ -844,8 +791,7 @@ i370_elf_late_size_sections (bfd *output_bfd,
 
 
   /* Allocate space for global sym dynamic relocs. */
-  struct elf_link_hash_table *htab = elf_hash_table (info);
-  elf_link_hash_traverse (elf_hash_table (info), allocate_dynrelocs, htab);
+  elf_link_hash_traverse (elf_hash_table (info), allocate_dynrelocs, info);
 
   /* The check_relocs and adjust_dynamic_symbol entry points have
      determined the sizes of the various dynamic sections.  Allocate
@@ -861,6 +807,7 @@ i370_elf_late_size_sections (bfd *output_bfd,
          of the dynobj section names depend upon the input files.  */
 
       name = bfd_section_name (s);
+
       if (strcmp (name, ".data.plink") == 0)
 	{
 	  /* Remember whether there is a PLT.  */
@@ -1571,13 +1518,20 @@ i370_elf_finish_dynamic_sections (bfd *output_bfd,
 
 #define elf_info_to_howto	i370_elf_info_to_howto
 
-#define elf_backend_plt_not_loaded 1
 #define elf_backend_rela_normal    1
+
+#if 0
+/* I dunno. These don't seem to do anything.
+   Here for future experiments?  */
+#define elf_backend_plt_not_loaded 0
+#define elf_backend_want_got_plt 1
+#define elf_backend_plt_readonly 1
+#define elf_backend_want_plt_sym 1
+#define elf_backend_want_got_sym 1
+#endif
 
 #define bfd_elf32_bfd_reloc_type_lookup		i370_elf_reloc_type_lookup
 #define bfd_elf32_bfd_reloc_name_lookup		i370_elf_reloc_name_lookup
-#define bfd_elf32_bfd_set_private_flags		i370_elf_set_private_flags
-#define bfd_elf32_bfd_merge_private_bfd_data	i370_elf_merge_private_bfd_data
 #define elf_backend_relocate_section		i370_elf_relocate_section
 
 /* Dynamic loader support is under construction; the stuff here is
