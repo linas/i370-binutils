@@ -75,7 +75,11 @@ extern char * i370_canonicalize_symbol_name(char *);
 /* $ is (not) used to refer to the current location.  */
 /* #define DOLLAR_DOT */
 
-#define DIFF_EXPR_OK		/* foo-. gets turned into PC relative relocs */
+extern bfd_boolean i370_string_escapes;
+#define TC_STRING_ESCAPES i370_string_escapes
+
+/* foo-. gets turned into PC relative relocs.  */
+#define DIFF_EXPR_OK
 
 /* Values passed to md_apply_fix3 don't include the symbol value.  */
 #define MD_APPLY_SYM_VALUE(FIX) 0
