@@ -1412,14 +1412,30 @@ i370_dc (unused)
     }
 
   type = *input_line_pointer;
+
   if ('C' == type) /* String constant */
     {
       ++input_line_pointer;
+      i370_rebcdic(i370_convert_dc_to_ebcdic, npeat);
+      return;
+    }
 
-      if (i370_convert_dc_to_ebcdic)
-	i370_rebcdic(1, npeat);
-      else
-	i370_rebcdic(0, npeat);
+  /* Avoid trying to parse crazy expressions */
+  switch (type)
+    {
+    case 'A':  /* Address of label */
+    case 'V':  /* External Address */
+    case 'B':  /* binary bitstring */
+    case 'H':  /* 16-bit decimal */
+    case 'F':  /* 32-bit decimal */
+    case 'X':  /* variable length hex */
+    case 'E':  /* 32-bit float */
+    case 'D':  /* 64-bit double */
+    case 'L':  /* 128-bit long double */
+      break;
+
+    default:
+      as_bad (_("unsupported DC type"));
       return;
     }
 
