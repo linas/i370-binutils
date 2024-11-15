@@ -1679,15 +1679,32 @@ i370_elf_lcomm (int unused ATTRIBUTE_UNUSED)
 
 #define LITERAL_POOL_SUPPORT
 #ifdef LITERAL_POOL_SUPPORT
-/* Provide support for literal pools within the text section.
+/* Provide support for literal pools.
    Loosely based on similar code from tc-arm.c.
-   We will use four symbols to locate four parts of the literal pool.
-   These four sections contain 64,32,16 and 8-bit constants; we use
-   four sections so that all memory access can be appropriately aligned.
-   That is, we want to avoid mixing these together so that we don't
-   waste space padding out to alignments.  The four pointers
+
+   The pool is organized into four areas that contain 64,32,16 and
+   8-bit constants; this is done so that all memory access can be
+   appropriately aligned. The goal is to avoid mixing these together,
+   so that padding out to alignments is minimized.  The four pointers
    longlong_poolP, word_poolP, etc. point to a symbol labeling the
    start of each pool part.
+
+   The 64,16 and 8-bit pools contain "true constants", like =X'1234',
+   or =D'3.14159', which are values that do not need to be relocated.
+   The 32-bit pool contains a mixture of constants, such as =F'-1',
+   and address literals, such as =V(foobar). The constants do not need
+   relocation; the address literals do. This is "mildly ugly" for
+   position-independent code (PIC): it would be best if the 32-bit pool
+   was split into two parts, one for true constants, and one for
+   adresses that require relocations.
+
+   For non-PIC code, there's no problem; the .ltorg goes into the .text
+   section and that's that. For PIC code, then entire .ltorg goes into
+   the .data.pool section, as part of the PLT entry for the function.
+   This is overkill; only the relocatable addessses needed to go into
+   the PLT; the true constants could have stayed in the text section.
+   But whatever; having two ltorgs, one for addresses and one for
+   constants, is a nice-to-have feature, but is not essential.
 
    lit_pool_num increments from zero to infinity and uniquely id's
      -- it's used to generate the *_poolP symbol name.  */
