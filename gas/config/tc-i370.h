@@ -68,6 +68,9 @@ extern char * i370_canonicalize_symbol_name(char *);
 /* $ is (not) used to refer to the current location.  */
 /* #define DOLLAR_DOT */
 
+extern bfd_boolean i370_string_escapes;
+#define TC_STRING_ESCAPES i370_string_escapes
+
 /* foo-. gets turned into PC relative relocs.  */
 #define DIFF_EXPR_OK
 

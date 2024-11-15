@@ -58,6 +58,12 @@ bfd_boolean i370_no_pseudo_dot = FALSE;
 bfd_boolean i370_labels_without_colons = FALSE;
 bfd_boolean i370_convert_dc_to_ebcdic = FALSE;
 
+/* Setting i370_string_escapes to true causes the backslash to be
+   interpreted as an escape character. This is normal for ASCII/unix
+   but is incorrect for MVS/HLASM. For example,  DC C'\' is just
+   Define Constant of a single char 0x5c ascii or 0xe0 ebcdic.  */
+bfd_boolean i370_string_escapes = TRUE;
+
 
 /* Generic assembler global variables which must be defined by all
    targets.  */
@@ -462,6 +468,7 @@ md_parse_option (int c, const char *arg)
 	  reg_names_p = FALSE;
 	  i370_no_pseudo_dot = TRUE;
 	  i370_labels_without_colons = TRUE;
+	  i370_string_escapes = FALSE;
 
 	  /* Current default is ascii (whut???) */
 	  i370_convert_dc_to_ebcdic = FALSE;
