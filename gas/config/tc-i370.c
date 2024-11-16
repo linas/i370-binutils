@@ -154,6 +154,7 @@ const pseudo_typeS md_pseudo_table[] =
   { "csect",    i370_csect,	0 },
   { "dsect",    i370_dsect,	0 },
   { "entry",    i370_entry,	0 },
+  { "extrn",    i370_entry,	0 },
 
   /* Enable ebcdic strings e.g. for 3270 support. */
   { "ebcdic",   i370_ebcdic,	1 },
@@ -988,7 +989,7 @@ char * i370_canonicalize_symbol_name (char *name)
   return name;
 }
 
-/* Provide minimal support for HLASM externals.
+/* Provide minimal support for HLASM externs and entry points.
 
    For example,
        ENTRY @@CRT0
@@ -1000,6 +1001,12 @@ char * i370_canonicalize_symbol_name (char *name)
 
    This is meant to be more or less the same as the elf `.globl __crt0`
    See the function s_globl() in read.c for a fancy example.
+
+   The EXTRN pseudo-op points here as well; see md_pseudo_table[] below.
+   The "conceptual" difference is that EXTRN declares a (global) symbol
+   that is resolved externally, whereas ENTRY declares a symbol that
+   is resolved in this very same file. From a practical standpoint,
+   there does not seem to be any difference in what we need to do.
 */
 
 static void
