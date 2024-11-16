@@ -127,6 +127,7 @@ static void i370_rmode PARAMS ((int));
 static void i370_csect PARAMS ((int));
 static void i370_dsect PARAMS ((int));
 static void i370_entry PARAMS ((int));
+static void i370_extrn PARAMS ((int));
 static void i370_ltorg PARAMS ((int));
 static void i370_using PARAMS ((int));
 static void i370_drop PARAMS ((int));
@@ -154,7 +155,7 @@ const pseudo_typeS md_pseudo_table[] =
   { "csect",    i370_csect,	0 },
   { "dsect",    i370_dsect,	0 },
   { "entry",    i370_entry,	0 },
-  { "extrn",    i370_entry,	0 },
+  { "extrn",    i370_extrn,	0 },
 
   /* Enable ebcdic strings e.g. for 3270 support. */
   { "ebcdic",   i370_ebcdic,	1 },
@@ -1033,6 +1034,23 @@ i370_entry (int unused ATTRIBUTE_UNUSED)
   demand_empty_rest_of_line ();
 }
 
+/* extrn - we don't need to do anything with this */
+
+static void
+i370_extrn (int unused ATTRIBUTE_UNUSED)
+{
+  char *name;
+  char *end;
+
+  name = input_line_pointer;
+  end = strpbrk(input_line_pointer, " \r\n");
+  if (NULL == end)
+    as_bad(_("enexpected end of file"));
+
+  input_line_pointer = end;
+
+  demand_empty_rest_of_line ();
+}
 
 #define BIGNUM_CACHE 8    /* Eight LITTLENUM_TYPE's so 16 bytes total */
 

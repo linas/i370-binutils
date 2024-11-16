@@ -75,8 +75,12 @@ extern char * i370_canonicalize_symbol_name(char *);
 /* $ is (not) used to refer to the current location.  */
 /* #define DOLLAR_DOT */
 
+/* binutils-2.14 uses NO_STRING_ESCAPES instead of TC_STRING_ESCAPES */
+#if 0
 extern bfd_boolean i370_string_escapes;
 #define TC_STRING_ESCAPES i370_string_escapes
+#endf
+#define NO_STRING_ESCAPES
 
 /* foo-. gets turned into PC relative relocs.  */
 #define DIFF_EXPR_OK
