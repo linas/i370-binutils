@@ -890,6 +890,7 @@ i370_rebcdic (int do_convert, int nrepeat)
   char *p, *ps, *end;
   char delim = 0;
   size_t nbytes;
+  char *start;
 
   delim = *input_line_pointer;
   if (('\'' == delim) || ('\"' == delim)) input_line_pointer++;
@@ -900,10 +901,32 @@ i370_rebcdic (int do_convert, int nrepeat)
   *end = '\0';
   nbytes = end - input_line_pointer;
 
+  start = input_line_pointer;
+  while (end > input_line_pointer)
+    {
+      if ((*input_line_pointer == '\'')
+          && (delim == '\''))
+      {
+          /* skip first single quote and hope they did the
+             right thing by doubling up */
+          input_line_pointer++;
+          nbytes--;
+      }
+      ++input_line_pointer;
+    }
+  input_line_pointer = start;
   p = frag_more (nbytes * nrepeat);
   ps = p;
   while (end > input_line_pointer)
     {
+      if ((*input_line_pointer == '\'')
+          && (delim == '\''))
+      {
+          /* skip first single quote and hope they did the
+             right thing by doubling up */
+          input_line_pointer++;
+          nbytes--;
+      }
       if (do_convert)
 	*p = ascebc [(unsigned char) (*input_line_pointer)];
       else
