@@ -476,7 +476,11 @@ md_parse_option (int c, const char *arg)
 
       else if (strcmp (arg, "ebcdic") == 0)
 	{
+/* accept and ignore a request to convert to EBCDIC
+   if we are already EBCDIC */
+#if !HOST_EBCDIC
 	  i370_convert_dc_to_ebcdic = TRUE;
+#endif
 	}
 
       /* -m360 means to assemble for the ancient 360 architecture.  */
